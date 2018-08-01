@@ -1,106 +1,56 @@
-#include <lusb0_usb.h> // ref: http://sourceforge.net/projects/libusb-win32
+// http://sourceforge.net/projects/libusb-win32
 #include <stdio.h>
+#include <unistd.h>
+#include "bt.h"
+#include "bt_usb.h"
+#define dump(d, l) do{int i;for(i=0;i<l;i++)printf("%02X ", (unsigned char)d[i]);printf("\n");}while(0)
 
-// Device vendor and product id.
-#define MY_VID 0x0a5c
-#define MY_PID 0x21ec
-// Device configuration and interface id.
-#define MY_CONFIG 1
-#define MY_INTF   0
-// Device endpoint(s)
-#define EP_IN  (USB_ENDPOINT_IN | USB_RECIP_INTERFACE)
-#define EP_OUT (USB_TYPE_CLASS | USB_ENDPOINT_OUT)
-// Device of bytes to transfer.
-#define BUF_SIZE 64
-
-usb_dev_handle *open_dev(void);
-static int transfer_bulk_async(usb_dev_handle *dev, int ep, char *bytes, int size, int timeout);
-
+void recv_cb(char *data, int len)
+{
+	if(!bt_cmp(data, CMP_RESET, sizeof(CMP_RESET))){
+		hci_send(SET_EVENT_MASK, sizeof(SET_EVENT_MASK));
+	}else if(!bt_cmp(data, CMP_SET_EVENT_MASK, sizeof(CMP_SET_EVENT_MASK))){
+		hci_send(LE_SET_EVENT_MASK, sizeof(LE_SET_EVENT_MASK));
+	}else if(!bt_cmp(data, CMP_LE_SET_EVENT_MASK, sizeof(CMP_LE_SET_EVENT_MASK))){
+		hci_send(LE_SET_ADV_PARAM, sizeof(LE_SET_ADV_PARAM));
+	}else if(!bt_cmp(data, CMP_LE_SET_ADV_PARAM, sizeof(CMP_LE_SET_ADV_PARAM))){
+		hci_send(LE_SET_ADV_DATA, sizeof(LE_SET_ADV_DATA));
+	}else if(!bt_cmp(data, CMP_LE_SET_ADV_DATA, sizeof(CMP_LE_SET_ADV_DATA))){
+		hci_send(LE_SET_ADV_ENABLE, sizeof(LE_SET_ADV_ENABLE));
+	}else if(!bt_cmp(data, CMP_LE_SET_ADV_ENABLE, sizeof(CMP_LE_SET_ADV_ENABLE))){
+		puts("Advertise enabled !");
+	}else if(!bt_cmp(data, RECV_LE_CONNECTED, sizeof(RECV_LE_CONNECTED))){
+		puts("Device connected !");
+	}else if(!bt_cmp(data, RECV_LE_DISCONNECTED, sizeof(RECV_LE_DISCONNECTED))){
+		puts("Device disconnected !");
+		hci_send(CMD_RESET, sizeof(CMD_RESET));
+	}else if(!bt_cmp(data, RECV_IOS_UNKNOWN_L2CAP, sizeof(RECV_IOS_UNKNOWN_L2CAP))){
+		hci_send(RSP_IOS_UNKNOWN_L2CAP, sizeof(RSP_IOS_UNKNOWN_L2CAP));
+	}else if(!bt_cmp(data, RECV_ATT_EXT_MTU, sizeof(RECV_ATT_EXT_MTU))){
+		puts("MTU exchanged !");
+		hci_send(RSP_ATT_EXT_MTU, sizeof(RSP_ATT_EXT_MTU));
+	}else if(!bt_cmp(data, RECV_GATT_GET_SERVICE_1, sizeof(RECV_GATT_GET_SERVICE_1))){
+		hci_send(RSP_GATT_GET_SERVICE_1, sizeof(RSP_GATT_GET_SERVICE_1));
+	}else if(!bt_cmp(data, RECV_GATT_GET_SERVICE_2, sizeof(RECV_GATT_GET_SERVICE_2))){
+		hci_send(RSP_GATT_GET_SERVICE_2, sizeof(RSP_GATT_GET_SERVICE_2));
+	}else if(!bt_cmp(data, RECV_GATT_GET_SERVICE_3, sizeof(RECV_GATT_GET_SERVICE_3))){
+		hci_send(RSP_GATT_GET_SERVICE_3, sizeof(RSP_GATT_GET_SERVICE_3));
+	}else if(!bt_cmp(data, RECV_GATT_GET_SERVICE_4, sizeof(RECV_GATT_GET_SERVICE_4))){
+		hci_send(RSP_GATT_GET_SERVICE_4, sizeof(RSP_GATT_GET_SERVICE_4));
+	}else if(!bt_cmp(data, RECV_GATT_READ_CHAR, sizeof(RECV_GATT_READ_CHAR))){
+		puts("GATT_READ_CHAR !");
+		hci_send(RSP_GATT_READ_CHAR, sizeof(RSP_GATT_READ_CHAR));
+	}else if(!bt_cmp(data, RECV_GATT_WRITE_CHAR, sizeof(RECV_GATT_WRITE_CHAR))){
+		puts("GATT_WRITE !");
+		hci_send(RSP_GATT_WRITE_CHAR, sizeof(RSP_GATT_WRITE_CHAR));
+	}else if(!bt_cmp(data, RECV_GATT_READ_DESC, sizeof(RECV_GATT_READ_DESC))){
+		puts("GATT_READ_DESC !");
+		hci_send(RSP_GATT_READ_DESC, sizeof(RSP_GATT_READ_DESC));
+	}
+}
 int main(void)
 {
-    usb_dev_handle *dev = NULL; /* the device handle */
-    char tmp[BUF_SIZE] = {0x03, 0x0c, 0x00};
-    int ret;
-    void* async_read_context = NULL;
-    void* async_write_context = NULL;
-
-    usb_init(); /* initialize the library */
-    usb_find_busses(); /* find all busses */
-    usb_find_devices(); /* find all connected devices */
-    if (!(dev = open_dev())){
-        printf("error opening device: \n%s\n", usb_strerror());
-        return 0;
-    }
-    if (usb_set_configuration(dev, MY_CONFIG) < 0){
-        printf("error setting config #%d: %s\n", MY_CONFIG, usb_strerror());
-        usb_close(dev);
-        return 0;
-    }
-    if (usb_claim_interface(dev, 0) < 0){
-        printf("error claiming interface #%d:\n%s\n", MY_INTF, usb_strerror());
-        usb_close(dev);
-        return 0;
-    }
-    ret = usb_control_msg(dev, EP_OUT, 0, 0, 0, tmp, 3, 1000);
-    printf("-- %d -- : ret=%d\n", __LINE__, ret);
-    ret = transfer_bulk_async(dev, EP_IN, tmp, sizeof(tmp), 5000);
-    printf("-- %d -- : ret=%d\n", __LINE__, ret);
-    int i; for(i=0;i<6;i++)printf("%02x ", tmp[i]);printf("\n");
-    usb_release_interface(dev, 0);
-    if (dev){
-        usb_close(dev);
-    }
-    return 0;
-}
-
-usb_dev_handle *open_dev(void)
-{
-    struct usb_bus *bus;
-    struct usb_device *dev;
-    for (bus = usb_get_busses(); bus; bus = bus->next){
-        for (dev = bus->devices; dev; dev = dev->next){
-            if (dev->descriptor.idVendor == MY_VID && dev->descriptor.idProduct == MY_PID){
-                return usb_open(dev);
-            }
-        }
-    }
-    return NULL;
-}
-
-static int transfer_bulk_async(usb_dev_handle *dev,
-                               int ep,
-                               char *bytes,
-                               int size,
-                               int timeout)
-{
-    // Each async transfer requires it's own context. A transfer
-    // context can be re-used.  When no longer needed they must be
-    // freed with usb_free_async().
-    //
-    void* async_context = NULL;
-    int ret;
-    // Setup the async transfer.  This only needs to be done once
-    // for multiple submit/reaps. (more below)
-    //
-    ret = usb_bulk_setup_async(dev, &async_context, ep);
-    if (ret < 0){
-        printf("error usb_bulk_setup_async:\n%s\n", usb_strerror());
-        goto Done;
-    }
-    // Submit this transfer.  This function returns immediately and the
-    // transfer is on it's way to the device.
-    ret = usb_submit_async(async_context, bytes, size);
-    if (ret < 0){
-        printf("error usb_submit_async:\n%s\n", usb_strerror());
-        usb_free_async(&async_context);
-        goto Done;
-    }
-    // Wait for the transfer to complete.  If it doesn't complete in the
-    // specified time it is cancelled.  see also usb_reap_async_nocancel().
-    //
-    ret = usb_reap_async(async_context, timeout);
-    // Free the context.
-    usb_free_async(&async_context);
-Done:
-    return ret;
+	hci_init(USB_LOG_ALL, recv_cb);
+	hci_send(CMD_RESET, sizeof(CMD_RESET));
+	while(1)usleep(~0);
 }
