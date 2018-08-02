@@ -1,4 +1,4 @@
-// http://sourceforge.net/projects/libusb-win32
+// sourceforge.net/projects/libusb-win32
 #include <stdio.h>
 #include <assert.h>
 #include <pthread.h>
