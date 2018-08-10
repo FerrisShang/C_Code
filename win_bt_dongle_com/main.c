@@ -80,7 +80,7 @@ void recv_cb_client(char *data, int len)
 }
 int main(void)
 {
-	hci_init(USB_LOG_ALL, recv_cb_client);
+	hci_init(USB_LOG_ALL, recv_cb_server);
 	hci_send(CMD_RESET, sizeof(CMD_RESET));
 	while(1)usleep(50000);
 }
