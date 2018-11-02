@@ -1,5 +1,6 @@
 // http://sourceforge.net/projects/libusb-win32
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include "bt.h"
 #include "bt_usb.h"

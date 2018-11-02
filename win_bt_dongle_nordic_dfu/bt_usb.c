@@ -1,5 +1,6 @@
 // sourceforge.net/projects/libusb-win32
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -38,7 +39,10 @@ static void* hci_read_th(void *p)
 		}
 	}
 }
-static usb_dev_handle *open_dev(void)
+
+#ifndef __LINUX__
+
+static USB_DEV_T *open_dev(void)
 {
     struct usb_bus *bus;
     struct usb_device *dev;
@@ -52,9 +56,9 @@ static usb_dev_handle *open_dev(void)
     return NULL;
 }
 
-static usb_dev_handle *get_usb_dev(void)
+static USB_DEV_T *get_usb_dev(void)
 {
-	static usb_dev_handle *dev=NULL;
+	static USB_DEV_T *dev=NULL;
 	if(dev) return dev;
     usb_init(); /* initialize the library */
     usb_find_busses(); /* find all busses */
@@ -76,23 +80,6 @@ static usb_dev_handle *get_usb_dev(void)
 	return dev;
 }
 
-usb_dev_handle *hci_init(int log_flag, void (*recv_cb)(char *data, int len))
-{
-	usb_dev_handle *ret = get_usb_dev();
-	_log_flag = log_flag;
-	_recv_cb = recv_cb;
-	pthread_mutex_init(&log_lock, NULL);
-	if(_log_flag & USB_LOG_BTSNOOP){
-		bt_snoop = create_btsnoop_rec(BT_SNOOP_PATH);
-	}
-	if(_recv_cb){
-		pthread_t th;
-		static int th1_ep = (USB_EP_EVT_IN), th2_ep = (USB_EP_ACL_IN);
-		pthread_create(&th, 0, hci_read_th, &th1_ep);
-		pthread_create(&th, 0, hci_read_th, &th2_ep);
-	}
-	return ret;
-}
 int hci_send(char *data, int len)
 {
 	int ret;
@@ -117,4 +104,72 @@ int hci_recv(char *data, int len, int endpoint)
 	}else{
 		return ret;
 	}
+}
+
+#else
+
+USB_DEV_T *get_usb_dev(void)
+{
+	static libusb_device_handle* dev = NULL;
+	if(dev) return dev;
+	int r = libusb_init(NULL);
+	if (r < 0) { fprintf(stderr, "failed to initialise libusb\n"); exit(1); }
+	dev = libusb_open_device_with_vid_pid(NULL, MY_VID, MY_PID);
+	if (!dev){ fprintf(stderr, "Could not find/open device\n"); goto out; }
+	libusb_detach_kernel_driver(dev, 0);
+	r = libusb_set_configuration(dev, MY_CONFIG);
+	if (r < 0){ printf("error setting config #%d: %s\n", MY_CONFIG, libusb_strerror(r)); goto out; }
+	r = libusb_claim_interface(dev, 0);
+	if (r < 0) { fprintf(stderr, "usb_claim_interface error %d\n", r); goto out; }
+	printf("claimed interface\n");
+	return dev;
+out:
+	libusb_close(dev);
+	libusb_exit(NULL);
+	exit(1);
+}
+
+int hci_send(char *data, int len)
+{
+	USB_DEV_T *dev = get_usb_dev();
+	assert(len >= 1 && (data[0] == 0x01 || data[0] == 0x02));
+	if(data[0] == 0x01){ //cmd
+		return libusb_control_transfer(dev, USB_EP_CMD_OUT, 0, 0, 0, data+1, len-1, TRAN_TOUT);
+	}else if(data[0] == 0x02){ //acl
+		return libusb_bulk_transfer(dev, USB_EP_ACL_OUT, data+1, len-1, &len, TRAN_TOUT);
+	}
+}
+
+int hci_recv(char *data, int len, int endpoint)
+{
+	assert(len > 0 && (endpoint == USB_EP_EVT_IN || endpoint == USB_EP_ACL_IN));
+	int recv_len = -1;
+	USB_DEV_T *dev = get_usb_dev();
+	if(!dev){puts("Error! usb_recv");while(1);}
+	libusb_bulk_transfer(dev, endpoint, data+1, len-1, &recv_len, TRAN_TOUT);
+	if(recv_len > 0){
+		data[0] = endpoint == USB_EP_EVT_IN ? 0x04 : 0x02;
+		log_data(data, recv_len + 1, LOG_IN);
+		return recv_len + 1;
+	}
+	return recv_len;
+}
+#endif
+
+USB_DEV_T *hci_init(int log_flag, void (*recv_cb)(char *data, int len))
+{
+	USB_DEV_T *ret = get_usb_dev();
+	_log_flag = log_flag;
+	_recv_cb = recv_cb;
+	pthread_mutex_init(&log_lock, NULL);
+	if(_log_flag & USB_LOG_BTSNOOP){
+		bt_snoop = create_btsnoop_rec(BT_SNOOP_PATH);
+	}
+	if(_recv_cb){
+		pthread_t th;
+		static int th1_ep = (USB_EP_EVT_IN), th2_ep = (USB_EP_ACL_IN);
+		pthread_create(&th, 0, hci_read_th, &th1_ep);
+		pthread_create(&th, 0, hci_read_th, &th2_ep);
+	}
+	return ret;
 }
