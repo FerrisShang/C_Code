@@ -37,7 +37,7 @@ static void bswap(char *dat,int len)
 	}
 }
 
-int is_data_match(struct cmp_data *cmp, uint8_t *buf, uint32_t buf_len)
+int is_data_match(struct cmp_data *cmp, char *buf, uint32_t buf_len)
 {
 	int remain_len = buf_len;
 	for(int i=0;i<cmp->item_num;i++){
@@ -110,7 +110,7 @@ int parse_snoop(char *path, struct snoop_rec **head, struct cmp_data *filter, ui
 	fclose(fp);
 	return rec_idx;
 }
-int drop_snoop(struct snoop_rec *head)
+void drop_snoop(struct snoop_rec *head)
 {
 	if(head){
 		if(head->next){
@@ -157,7 +157,7 @@ void snoop_filter(struct snoop_rec *head, int argc, char *argv[])
 
 void snoop_to_file(struct snoop_rec *head, char *path)
 {
-	uint8_t buf[MAX_LEN];
+	char buf[MAX_LEN];
 	FILE *fp = fopen(path, "w");
 	while(head){
 		if(!head->ignore){
@@ -179,9 +179,8 @@ void snoop_to_file(struct snoop_rec *head, char *path)
 
 int main(int argc, char *argv[])
 {
-	char *file_in = argc > 1 ? argv[1] : "";
+	char *file_in = argc > 1 ? argv[1] : "btsnoop_hci.log";
 	char *file_out = "snoop_rec.txt";
-	uint8_t buf[MAX_LEN];
 	struct snoop_rec *head;
 	struct cmp_data filter[] = {
 		{2, {  {{0x04, 0x0F, 0x04, 0x00}, 4}, {"CMD status", 0}  }},
@@ -196,5 +195,6 @@ int main(int argc, char *argv[])
 	snoop_filter(head, argc, argv);
 	snoop_to_file(head, file_out);
 	drop_snoop(head);
+	printf("Output: %s\n", file_out);
 	return 0;
 }

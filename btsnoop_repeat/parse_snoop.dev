@@ -1,6 +1,6 @@
 [Project]
-FileName=usb_hci.dev
-Name=usb_hci
+FileName=parse_snoop.dev
+Name=parse_snoop
 Type=1
 Ver=2
 ObjFiles=
@@ -19,7 +19,7 @@ ObjectOutput=
 LogOutput=
 LogOutputEnabled=0
 OverrideOutput=0
-OverrideOutputName=usb_hci.exe
+OverrideOutputName=parse_snoop.exe
 HostApplication=
 UseCustomMakefile=0
 CustomMakefile=
@@ -29,7 +29,7 @@ IncludeVersionInfo=0
 SupportXPThemes=0
 CompilerSet=3
 CompilerSettings=0000000100000000000000000
-UnitCount=3
+UnitCount=1
 
 [VersionInfo]
 Major=1
@@ -50,16 +50,6 @@ ProductVersion=1.0.0.0
 AutoIncBuildNr=0
 SyncProduct=1
 
-[Unit1]
-FileName=main.c
-CompileCpp=0
-Folder=
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit2]
 FileName=bt_usb.c
 CompileCpp=0
@@ -72,6 +62,16 @@ BuildCmd=
 
 [Unit3]
 FileName=btsnoop_rec.c
+CompileCpp=0
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit1]
+FileName=parse_snoop.c
 CompileCpp=0
 Folder=
 Compile=1

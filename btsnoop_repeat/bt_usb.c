@@ -13,10 +13,10 @@
 
 static int _log_flag;
 static FILE *bt_snoop;
-static void (*_recv_cb)(char *data, int len);
+static void (*_recv_cb)(uint8_t *data, int len);
 static pthread_mutex_t log_lock;
 
-static void log_data(char *data, int len, int dir)
+static void log_data(uint8_t *data, int len, int dir)
 {
 	pthread_mutex_lock(&log_lock);
 	if((_log_flag & USB_LOG_OUTPUT) && dir == LOG_IN) { printf(">>> "); dump(data, len); }
@@ -28,7 +28,7 @@ static void log_data(char *data, int len, int dir)
 static void* hci_read_th(void *p)
 {
 	int ep = *(int*)p;
-	char buf[1024];
+	uint8_t buf[1024];
 	while(1){
 		int res = hci_recv(buf, 1024, ep);
 		if(res > 0){
@@ -37,6 +37,7 @@ static void* hci_read_th(void *p)
 			usleep(10000);
 		}
 	}
+	return NULL;
 }
 
 #ifndef __LINUX__
@@ -79,7 +80,7 @@ static USB_DEV_T *get_usb_dev(void)
 	return dev;
 }
 
-int hci_send(char *data, int len)
+int hci_send(uint8_t *data, int len)
 {
 	int ret;
 	assert(len >= 1 && (data[0] == 0x01 || data[0] == 0x02));
@@ -92,7 +93,7 @@ int hci_send(char *data, int len)
 	return ret;
 }
 
-int hci_recv(char *data, int len, int endpoint)
+int hci_recv(uint8_t *data, int len, int endpoint)
 {
 	assert(len > 0 && (endpoint == USB_EP_EVT_IN || endpoint == USB_EP_ACL_IN));
 	int ret = usb_bulk_read(get_usb_dev(), endpoint, data+1, len-1, TRAN_TOUT);
@@ -121,6 +122,7 @@ USB_DEV_T *get_usb_dev(void)
 	r = libusb_claim_interface(dev, 0);
 	if (r < 0) { fprintf(stderr, "usb_claim_interface error %d\n", r); goto out; }
 	printf("claimed interface\n");
+	libusb_reset_device(dev);
 	return dev;
 out:
 	libusb_close(dev);
@@ -128,7 +130,7 @@ out:
 	exit(1);
 }
 
-int hci_send(char *data, int len)
+int hci_send(uint8_t *data, int len)
 {
 	int ret;
 	USB_DEV_T *dev = get_usb_dev();
@@ -143,7 +145,7 @@ int hci_send(char *data, int len)
 	return ret;
 }
 
-int hci_recv(char *data, int len, int endpoint)
+int hci_recv(uint8_t *data, int len, int endpoint)
 {
 	assert(len > 0 && (endpoint == USB_EP_EVT_IN || endpoint == USB_EP_ACL_IN));
 	int recv_len = -1;
@@ -159,7 +161,7 @@ int hci_recv(char *data, int len, int endpoint)
 }
 #endif
 
-USB_DEV_T *hci_init(int log_flag, void (*recv_cb)(char *data, int len))
+USB_DEV_T *hci_init(int log_flag, void (*recv_cb)(uint8_t *data, int len))
 {
 	USB_DEV_T *ret = get_usb_dev();
 	_log_flag = log_flag;

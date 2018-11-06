@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
 #include <sys/time.h>
 
@@ -49,7 +50,7 @@ void close_btsnoop_rec(FILE *fp)
 	fclose(fp);
 }
 
-void record_btsnoop(FILE *fp, char *hci_data, int data_len, char data_dir)
+void record_btsnoop(FILE *fp, uint8_t *hci_data, int data_len, char data_dir)
 {
 	int tLen = data_len;
 	char drops[4] = {0,0,0,0};

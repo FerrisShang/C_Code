@@ -1,6 +1,7 @@
 #ifndef __BT_USB_H__
 #define __BT_USB_H__
 
+#include <stdint.h>
 #define __LINUX__
 
 #ifdef __LINUX__
@@ -36,8 +37,8 @@ typedef struct usb_dev_handle USB_DEV_T;
 #define USB_LOG_BTSNOOP 0x02
 #define USB_LOG_ALL     (USB_LOG_OUTPUT | USB_LOG_BTSNOOP)
 
-USB_DEV_T *hci_init(int log_flag, void (*recv_cb)(char *data, int len));
-int hci_send(char *data, int len);
-int hci_recv(char *data, int len, int endpoint);
+USB_DEV_T *hci_init(int log_flag, void (*recv_cb)(uint8_t *data, int len));
+int hci_send(uint8_t *data, int len);
+int hci_recv(uint8_t *data, int len, int endpoint);
 
 #endif /* __BT_USB_H__ */
