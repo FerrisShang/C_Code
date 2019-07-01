@@ -55,7 +55,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		return 0;
 	}
 #endif
-	HINSTANCE hinstDLL = LoadLibrary(TEXT(".\\mk_hook.dll"));
+	HINSTANCE hinstDLL = LoadLibrary(TEXT("mk_hook.dll"));
 	HOOKPROC k_hook_proc = (HOOKPROC)GetProcAddress(hinstDLL, "KeyboardHook");
 	k_hook = SetWindowsHookEx(WH_KEYBOARD_LL, k_hook_proc, hinstDLL, 0);
 	HOOKPROC m_hook_proc = (HOOKPROC)GetProcAddress(hinstDLL, "MouseHook");

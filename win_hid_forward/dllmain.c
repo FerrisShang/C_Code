@@ -72,7 +72,7 @@ DLLIMPORT LRESULT CALLBACK MouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 	LPMSLLHOOKSTRUCT m = (LPMSLLHOOKSTRUCT)lParam;
 #if DEBUG
 	char tmp[256] = {0};
-	sprintf(tmp, "%02x, %02x, %02x, %02x", nCode, wParam, m->flags, m->mouseData);
+	sprintf(tmp, "%02x, %02x, %02x, %02x, %d, %d", nCode, wParam, m->flags, m->mouseData, m->pt.x, m->pt.y);
 	udp_send(tmp, strlen(tmp));
 	return CallNextHookEx(0, nCode, wParam, lParam);
 #endif
@@ -80,7 +80,7 @@ DLLIMPORT LRESULT CALLBACK MouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 	
 	memset(send_data, 0, DATA_LEN); 
 	send_data[2] = 0x01;
-	if(wParam > 0x200 && wParam <= 0x20a){
+	if(wParam > 0x200 && wParam <= 0x20c){
 		if(wParam == 0x201){
 			*(uint16_t*)&send_data[4] = 0x0110; send_data[6] = 0x01;
 		}else if(wParam == 0x202){
@@ -97,6 +97,12 @@ DLLIMPORT LRESULT CALLBACK MouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 			send_data[2] = 0x02; *(uint16_t*)&send_data[4] = 0x0008;
 			if(((m->mouseData >> 24) & 0xFF) == 0x00){*(uint32_t*)&send_data[6] = 0x00000001;}
 			else if(((m->mouseData >> 24) & 0xFF) == 0xFF){*(uint32_t*)&send_data[6] = 0xFFFFFFFF;}
+		}else if(wParam == 0x20b){
+			if(m->mouseData == 0x20000){*(uint16_t*)&send_data[4] = 0x0114; send_data[6] = 0x01;}
+			else if(m->mouseData == 0x10000){*(uint16_t*)&send_data[4] = 0x0113; send_data[6] = 0x01;}
+		}else if(wParam == 0x20c){
+			if(m->mouseData == 0x20000){*(uint16_t*)&send_data[4] = 0x0114; send_data[6] = 0x0;}
+			else if(m->mouseData == 0x10000){*(uint16_t*)&send_data[4] = 0x0113; send_data[6] = 0x0;}
 		}
 		udp_send(send_data, DATA_LEN);
 	}
@@ -123,8 +129,6 @@ DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 	PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)lParam;
 	static unsigned char send_data[DATA_LEN], i;
 	static bool alt_down;
-	if(nCode < 0)
-		return CallNextHookEx(0, nCode, wParam, lParam);
 	memset(send_data, 0, DATA_LEN); 
 	send_data[0] = 0x5f;
 	send_data[1] = 0xFF;
@@ -142,6 +146,9 @@ DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 	if((alt_down && (wParam & 1) == 0x00) && p->scanCode == 0x3a){
 		flag->remote_ctrl = !flag->remote_ctrl;
 		GetCursorPos(&flag->stop_pos);
+		send_data[4] = 0x38;
+		send_data[6] = 0;
+		udp_send(send_data, DATA_LEN);
 		return TRUE;
 	}else if((alt_down && (wParam & 1) == 0x00) && p->scanCode == 0x53){
 		exit(0);
@@ -150,7 +157,12 @@ DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 	if(!flag->remote_ctrl)
 		return CallNextHookEx(0, nCode, wParam, lParam);
 
-	send_data[4] = p->scanCode;
+	if((p->scanCode) == 0x48) send_data[4] = 0x67;
+	else if((p->scanCode) == 0x50) send_data[4] = 0x6c;
+	else if((p->scanCode) == 0x4b) send_data[4] = 0x69;
+	else if((p->scanCode) == 0x4d) send_data[4] = 0x6a;
+	else if((p->scanCode) == 0x5b) send_data[4] = 0x7d;
+	else send_data[4] = p->scanCode;
 	send_data[6] = (wParam & 1) == 0x00?0x01:0x00;
 	udp_send(send_data, DATA_LEN);
 	return TRUE;
