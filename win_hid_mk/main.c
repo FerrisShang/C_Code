@@ -50,11 +50,11 @@ void callback(int nCode, WPARAM wParam, LPARAM lParam)
 		if(wParam & PARAM_KEY_UP){
 			if(k->scanCode == 29) flag &= ~0x01; if(k->scanCode == 42) flag &= ~0x02; if(k->scanCode == 56) flag &= ~0x04;
 			if(k->scanCode == 91) flag &= ~0x08; if(k->scanCode == 54) flag &= ~0x20; if(k->scanCode == 92) flag &= ~0x80;
-			SEND_KEY_UP();
+			SEND_KEY_EVT(flag, 0);
 		}else{
 			if(k->scanCode == 29) flag |= 0x01; if(k->scanCode == 42) flag |= 0x02; if(k->scanCode == 56) flag |= 0x04;
 			if(k->scanCode == 91) flag |= 0x08; if(k->scanCode == 54) flag |= 0x20; if(k->scanCode == 92) flag |= 0x80;
-			SEND_KEY_DOWN(flag, key_map[k->scanCode]);
+			SEND_KEY_EVT(flag, key_map[k->scanCode]);
 		}
 	}
 }

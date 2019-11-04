@@ -14,8 +14,7 @@
 #define SET_HANDLE(data, offset) do{*(uint16_t*)&data[offset] = conn_handle;}while(0)
 #define RAND(data, len) do{int i;for(i=0;i<len;i++) (data)[i] = rand();}while(0)
 #define DUMP(data, len) do{int i;for(i=0;i<len;i++) printf("%02X ", (uint8_t)data[i]); printf("\n"); }while(0)
-#define SEND_KEY_DOWN(flag, k) do{SET_HANDLE(SEND_GATT_KEY, 1);SEND_GATT_KEY[12]=flag;SEND_GATT_KEY[14]=k;SEND(SEND_GATT_KEY);}while(0)
-#define SEND_KEY_UP() do{SET_HANDLE(SEND_GATT_KEY, 1);*(uint32_t*)&SEND_GATT_KEY[12]=0;SEND(SEND_GATT_KEY);}while(0)
+#define SEND_KEY_EVT(flag, k) do{SET_HANDLE(SEND_GATT_KEY, 1);SEND_GATT_KEY[12]=flag;SEND_GATT_KEY[14]=k;SEND(SEND_GATT_KEY);}while(0)
 #define SEND_MOUSE_EVT(button, wheel, x, y) \
 	do{ \
 		SET_HANDLE(SEND_GATT_MOUSE_EVT, 1); \
@@ -42,8 +41,7 @@ static bool c(uint8_t *d1, uint8_t *d2, int l){
 }
 
 static uint8_t tk[16] = {0};
-static uint8_t local_ltk[16] = {0};
-static uint8_t rand_ediv[10] = {0};
+static uint8_t local_ltk[16] = {0x5f};
 static uint16_t conn_handle;
 static uint8_t acl_count = 8;
 static uint8_t ia[6], iat, ra[6] = {LOCAL_RAND_ADDR}, rat = 1;
@@ -258,9 +256,9 @@ static void bt_recv_cb(char *d, int len)
 		encrypted = true;
 		if(!is_reconnect){
 			RAND(&SEND_MASTER_ID[10], 10);
-
 			memcpy(&SEND_ENC_INFO[10], &SEND_MASTER_ID[10], 10); // TODO: Encode
 			memcpy(&SEND_ENC_INFO[10+10], &SEND_MASTER_ID[10], 6);
+			btc_e(local_ltk, &SEND_ENC_INFO[10]);
 
 			SET_HANDLE(SEND_ENC_INFO, 1);
 			SEND(SEND_ENC_INFO);
@@ -275,6 +273,7 @@ static void bt_recv_cb(char *d, int len)
 		SET_HANDLE(RSP_RECV_LTK, 4);
 		memcpy(&RSP_RECV_LTK[6], &SEND_MASTER_ID[10], 10); // TODO: Decode
 		memcpy(&RSP_RECV_LTK[6+10], &SEND_MASTER_ID[10], 6);
+		btc_e(local_ltk, &RSP_RECV_LTK[6]);
 
 		SEND(RSP_RECV_LTK);
 	}IF(RECV_NUM_CMP){
