@@ -38,8 +38,8 @@ void callback(int nCode, WPARAM wParam, LPARAM lParam)
 		}else if(wParam == PARAM_MOUSE_MB_D){ mouse_key |= 0x04;
 		}else if(wParam == PARAM_MOUSE_MB_U){ mouse_key &= ~0x04;
 		}else if(wParam == PARAM_MOUSE_WHELL){
-			if(((m->mouseData >> 24) & 0xFF) == 0xFF){ SEND_MOUSE_EVT(0, -1, 0, 0);
-			}else{ SEND_MOUSE_EVT(0, 1, 0, 0); }
+			if(((m->mouseData >> 24) & 0xFF) == 0xFF){ SEND_MOUSE_EVT(mouse_key, -1, 0, 0);
+			}else{ SEND_MOUSE_EVT(mouse_key, 1, 0, 0); }
 			return;
 		}else if(wParam == PARAM_MOUSE_FUNCD){
 		}else if(wParam == PARAM_MOUSE_FUNCU){
