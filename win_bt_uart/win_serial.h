@@ -138,7 +138,7 @@ class CBtIO: CSerial{
 	}
 	void clear(void){ packages.clear(); }
 	int send(uint8_t *buf, int len){ write(buf, len); }
-	int send(vector<uint8_t>& data){ write((uint8_t*)&data[0], data.size()); }
+	int send(const vector<uint8_t>& data){ write((uint8_t*)&data[0], data.size()); }
 #define ERR_NO_ERR 0
 #define ERR_FMT   -1
 #define ERR_TOUT  -2
@@ -150,11 +150,25 @@ class CBtIO: CSerial{
 			if(len != 8) return ERR_TOUT;
 			int left_len = *(uint16_t*)&buf[7];
 			if(left_len > 1000) return ERR_FMT;
-			len = btio->read(&buf[1], left_len);
+			len = btio->read(&buf[9], left_len);
 			if(len != left_len) return ERR_TOUT;
 			return 9+len;
+		}else if(buf[0] == 0x04){ // HCI_EVT
+			len = btio->read(&buf[1], 2);
+			if(len != 2) return ERR_TOUT;
+			int left_len = *(uint8_t*)&buf[2];
+			len = btio->read(&buf[3], left_len);
+			if(len != left_len) return ERR_TOUT;
+			return 3+len;
+		}else if(buf[0] == 0x02){ // HCI_ACL
+			len = btio->read(&buf[1], 4);
+			if(len != 4) return ERR_TOUT;
+			int left_len = *(uint16_t*)&buf[3];
+			len = btio->read(&buf[5], left_len);
+			if(len != left_len) return ERR_TOUT;
+			return 5+len;
 		}else if(buf[0] == 0x01){ // HCI_CMD
-			return ERR_FMT;
+			return ERR_FMT; // Host never receive HCI_CMD
 		}
 	}
 	static void __read__(CBtIO *btio){

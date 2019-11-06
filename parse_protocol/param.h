@@ -47,6 +47,19 @@ inline bool isBasicType(const string& t){
 			(t == PTYPE_T1_25) || (t == PTYPE_T10));
 }
 
+char* _strdup (const char* s)
+{
+  size_t slen = strlen(s);
+  char* result = (char*)malloc(slen + 1);
+  if(result == NULL)
+  {
+    return NULL;
+  }
+
+  memcpy(result, s, slen+1);
+  return result;
+}
+
 class CParam{
 	public:
 		class CBitWidth {
@@ -58,17 +71,17 @@ class CParam{
 				this->cell = cell;
 				if(!cell.text.length()){ return; }
 				if(strstr(cell.text.c_str(), "/")){
-					char *str = strdup(cell.text.c_str()), *p=str, *w=NULL, *m=NULL;
+					char *str = _strdup(cell.text.c_str()), *pp=str, *pw=NULL, *pm=NULL;
 					FOR(i, cell.text.length()-1){
 						if(str[i] == '/'){
-							if(!w){ w = &str[i+1]; }
-							else{ m = &str[i+1]; }
+							if(!pw){ pw = &str[i+1]; }
+							else{ pm = &str[i+1]; }
 							str[i] = '\0';
 						}
 					}
-					this-> p = atoi(p);
-					this-> w = atoi(w);
-					this-> m = atoi(m);
+					this->p = atoi(pp);
+					this->w = atoi(pw);
+					this->m = atoi(pm);
 					free(str);
 				}else{
 					p = w = m = stoi(cell.text, nullptr, 0);
