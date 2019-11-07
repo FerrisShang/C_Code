@@ -56,7 +56,7 @@ class CSerial{
 			hComm = 0;
 		}
 		inline void write(const uint8_t *data, int len){
-			static DWORD num;
+			DWORD num;
 			if(hComm){
 				WriteFile(hComm, data, len, &num, NULL);
 			}
@@ -64,7 +64,7 @@ class CSerial{
 		int read(uint8_t *buf, int len){
 			if(hComm){
 				DWORD read_len = (DWORD)-1;
-				static COMSTAT stat;
+				COMSTAT stat;
 
 				int retry = recv_tout;
 				while(retry--){
@@ -174,7 +174,7 @@ class CBtIO: CSerial{
 	static void __read__(CBtIO *btio){
 		btio->exit_flag = false;
 		while(1){
-			static vector<uint8_t> buf;
+			vector<uint8_t> buf;
 			buf.resize(1024); buf[0] = -1;
 			int res = __get_stream__(btio, &buf[0]);
 			if(res > ERR_NO_ERR){

@@ -44,8 +44,9 @@ class CUnpack{
 			else if(s.size() == 4) return s[0]+(s[1]<<8)+(s[2]<<16)+(s[3]<<24);
 			assert(0);
 		}
-		vector<uint8_t> uint2byteArray(uint8_t value, int byteWidth){
-			if(byteWidth == 1){ return vector<uint8_t> {(uint8_t)value}; }
+		vector<uint8_t> uint2byteArray(uint32_t value, int byteWidth){
+			if(byteWidth == 1){ return vector<uint8_t> { (uint8_t)value}; }
+			if(byteWidth == 2){ return vector<uint8_t> { (uint8_t)value, (uint8_t)(value>>8) }; }
 			assert(0);
 		}
 		int32_t byteArray2int(vector<uint8_t>& s){
@@ -134,7 +135,7 @@ class CUnpack{
 				//cout << p->name() << " " << p->bitWidth.isBitShare() << endl;
 				int cpInc = p->bitWidth.m==0?ml-cp:p->bitWidth.m/8;
 				if(p->bitWidth.isBitShare()){
-					if(!bitShareWidth){ bitShareWidth=p->bitWidth.m; }
+					if(!bitShareWidth){ bitShareWidth=p->bitWidth.m/8; }
 					if(bitPos > p->bitWidth.p){
 						bitPos = p->bitWidth.p;
 						cpInc = 0;
@@ -161,6 +162,7 @@ class CUnpack{
 					CFormat::CSubItem *newSubItem = NULL;
 					if(p->subKey().length()){
 						int itemValue = keyValue(p->subKey());
+						if(itemValue < 0){ continue; }
 						assert(database->format.commands.count(subItem->typeRemarks[i].type));
 						if(database->format[subItem->typeRemarks[i].type].subItems.count(itemValue)){
 							newSubItem = &database->format[subItem->typeRemarks[i].type][itemValue];
@@ -186,6 +188,7 @@ class CUnpack{
 				//cout << "*" << subKey << " . " << it->first << endl;
 				if(it->first == subKey){
 					auto& s = it->second;
+					if(s.size() == 0){ return -1; }
 					return byteArray2uint(s);
 				}
 			}

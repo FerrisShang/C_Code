@@ -215,7 +215,7 @@ class CDatabase {
 						return;
 					}
 					CFormat::CSubItem& subItem = cmd->subItems[key_code];
-					char *str = _strdup(cell_param().c_str());
+					char *str = __strdup(cell_param().c_str());
 					for (const char* tok = strtok(str, "|"); tok && *tok; tok = strtok(NULL, "|"))
 					{
 						const char *p = tok; while(*p == ' ') p++;

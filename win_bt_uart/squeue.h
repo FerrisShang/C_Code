@@ -23,7 +23,7 @@ class CSQueue {
 					if(c.wait_for(lock,std::chrono::milliseconds(tout))==std::cv_status::timeout){
 						throw 0;
 					}else{
-							break;
+						break;
 					}
 				}
 			}

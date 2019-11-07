@@ -47,7 +47,9 @@ inline bool isBasicType(const string& t){
 			(t == PTYPE_T1_25) || (t == PTYPE_T10));
 }
 
-char* _strdup (const char* s)
+#ifndef __STRDUP__
+#define __STRDUP__
+char* __strdup (const char* s)
 {
   size_t slen = strlen(s);
   char* result = (char*)malloc(slen + 1);
@@ -59,6 +61,7 @@ char* _strdup (const char* s)
   memcpy(result, s, slen+1);
   return result;
 }
+#endif /* __STRDUP__ */
 
 class CParam{
 	public:
@@ -71,7 +74,7 @@ class CParam{
 				this->cell = cell;
 				if(!cell.text.length()){ return; }
 				if(strstr(cell.text.c_str(), "/")){
-					char *str = _strdup(cell.text.c_str()), *pp=str, *pw=NULL, *pm=NULL;
+					char *str = __strdup(cell.text.c_str()), *pp=str, *pw=NULL, *pm=NULL;
 					FOR(i, cell.text.length()-1){
 						if(str[i] == '/'){
 							if(!pw){ pw = &str[i+1]; }
