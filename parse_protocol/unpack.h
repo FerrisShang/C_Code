@@ -34,7 +34,7 @@ class CUnpack{
 		inline string operator()(void){ return text; }
 		string byteArray2hex(vector<uint8_t>& s){
 			string ret("0x"); char buf[8];
-			FOR(i, s.size()){ sprintf(buf, "%02X", s[i]); ret += string(buf); }
+			FOR(i, s.size()){ sprintf(buf, "%02X", s[s.size()-i-1]); ret += string(buf); }
 			return ret;
 		}
 		uint32_t byteArray2uint(vector<uint8_t>& s){
