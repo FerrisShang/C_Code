@@ -15,20 +15,21 @@ void btc_e(uint8_t *key, uint8_t *in_out)
 	AES_ECB_encrypt(&ctx, in_out);
 }
 
-void btc_s1(uint8_t *key, uint8_t *r1, uint8_t *r2, uint8_t *out)
+void btc_s1(uint8_t *k, uint8_t *r1, uint8_t *r2, uint8_t *out)
 {
 	int i;
+	static uint8_t key[16];
 	for(i=0;i<8;i++){
 		out[i+0] = r1[8-1-i];
 		out[i+8] = r2[8-1-i];
 	}
+	for(i=0;i<16;i++){ key[i] = k[16-1-i]; }
 	btc_e(key, out);
 	brev(out, 16);
 }
 
 void btc_c1(uint8_t *k, uint8_t *r, uint8_t *preq, uint8_t *pres, uint8_t iat, uint8_t rat, uint8_t *ia, uint8_t *ra, uint8_t *out)
 {
-	static uint8_t p1[16];
 	static uint8_t p2[16];
 	static uint8_t key[16];
 	int i;
@@ -45,7 +46,7 @@ void btc_c1(uint8_t *k, uint8_t *r, uint8_t *preq, uint8_t *pres, uint8_t iat, u
 		p2[i+10] = ra[6-1-i];
 	}
 	bxor(p2, out, 16);
-	btc_e(k, out);
+	btc_e(key, out);
 	brev(out, 16);
 }
 
