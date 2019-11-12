@@ -65,7 +65,14 @@ DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 	if((alt_down && (wParam & 1) == 0x00) && p->scanCode == 0x3a){
 		data->remote_ctrl = !data->remote_ctrl;
 		GetCursorPos(&data->stop_pos);
-		// Send ALT_UP here ??
+		// Send ALT_UP here !
+		if(data->callback){
+			wParam = 0x101; /* PARAM_KEY_MASK | PARAM_KEY_UP */
+			KBDLLHOOKSTRUCT param;
+			param.flags = 0;
+			param.scanCode = 56;
+			data->callback(nCode, wParam, (LPARAM)&param);
+		}
 		return TRUE;
 	}else if((alt_down && (wParam & 1) == 0x00) && p->scanCode == 0x53){
 		exit(0);
