@@ -1,6 +1,7 @@
 #ifndef __BT_USB_H__
 #define __BT_USB_H__
 
+#include <stdint.h>
 #include "lusb0_usb.h"
 
 // Device vendor and product id.
@@ -24,8 +25,9 @@
 
 #define BT_SNOOP_PATH   "D:\\x.log"
 
-usb_dev_handle *hci_init(int log_flag, void (*recv_cb)(char *data, int len));
-int hci_send(char *data, int len);
-int hci_recv(char *data, int len, int endpoint);
+usb_dev_handle *hci_init(int log_flag, void (*recv_cb)(uint8_t *data, int len));
+void hci_reinit(void (*cb)(void));
+int hci_send(uint8_t *data, int len);
+int hci_recv(uint8_t *data, int len, int endpoint);
 
 #endif /* __BT_USB_H__ */

@@ -4,46 +4,20 @@
 
 #include "bt_encrypt.h"
 #include "bt_usb.h"
+#include "hid.h"
 
-#define LOCAL_RAND_ADDR 0xd4,0x35,0x1c,0x53,0xfe,0xc7
 
-#define XXXX 0xFE
 #define IF(comp) else if(c(d, comp, min(len, sizeof(comp))))
 #define IFOR(cmp1, cmp2) else if(c(d, cmp1, min(len, sizeof(cmp1))) || c(d, cmp2, min(len, sizeof(cmp2))))
 #define SEND(data) send_hid(data, sizeof(data))
-#define SET_HANDLE(data, offset) do{*(uint16_t*)&data[offset] = conn_handle;}while(0)
 #define RAND(data, len) do{int i;for(i=0;i<len;i++) (data)[i] = rand();}while(0)
 #define DUMP(data, len) do{int i;for(i=0;i<len;i++) printf("%02X ", (uint8_t)data[i]); printf("\n"); }while(0)
-#define HID_ENABLED() (hid_enabled>1)
-#define SEND_KEY_EVT(flag, k) do{if(!HID_ENABLED())break; SET_HANDLE(SEND_GATT_KEY, 1);SEND_GATT_KEY[12]=flag;SEND_GATT_KEY[14]=k;SEND(SEND_GATT_KEY);}while(0)
-#define SEND_MOUSE_EVT(button, wheel, x, y) \
-	do{ \
-		if(!HID_ENABLED())break; \
-		SET_HANDLE(SEND_GATT_MOUSE_EVT, 1); \
-		int16_t xx = x; int16_t yy = y; \
-		if(xx < 0){ \
-			*(int16_t*)&SEND_GATT_MOUSE_EVT[13]=((~xx)+1); \
-			*(int16_t*)&SEND_GATT_MOUSE_EVT[13] *= -1; \
-		}else{ \
-			*(int16_t*)&SEND_GATT_MOUSE_EVT[13]=xx; \
-		} \
-		if(yy < 0){ \
-			*(int16_t*)&SEND_GATT_MOUSE_EVT[15]=((~yy)+1); \
-			*(int16_t*)&SEND_GATT_MOUSE_EVT[15] *= -1; \
-		}else{ \
-			*(int16_t*)&SEND_GATT_MOUSE_EVT[15]=yy; \
-		} \
-		*(uint8_t*)&SEND_GATT_MOUSE_EVT[12]=(button); \
-		*(uint8_t*)&SEND_GATT_MOUSE_EVT[17]=(wheel); \
-		SEND(SEND_GATT_MOUSE_EVT); \
-	}while(0)
-
 static bool c(uint8_t *d1, uint8_t *d2, int l){
 	int i;for(i=0;i<l;i++){ if(!(d1[i] == d2[i] || d2[i] == XXXX)) return false; } return true;
 }
 
 static uint8_t tk[16] = {0};
-static uint8_t local_ltk[16] = {0x5f};
+static uint8_t local_ltk[16] = HID_LOCAL_LTK;
 static uint16_t conn_handle;
 static uint8_t acl_count = 8;
 static uint8_t ia[6], iat = 0xFF, ra[6] = {LOCAL_RAND_ADDR}, rat = 1;
@@ -170,8 +144,6 @@ static uint8_t RSP_GATT_WRITE_DES1[] = {0x02,XXXX,XXXX,0x05,0x00,0x01,0x00,0x04,
 static uint8_t RECV_GATT_READ_DES1[] = {0x02,XXXX,XXXX,0x07,0x00,0x03,0x00,0x04,0x00,0x0a,0x06,0x00};
 static uint8_t RECV_GATT_READ_DES2[] = {0x02,XXXX,XXXX,0x07,0x00,0x03,0x00,0x04,0x00,0x0a,0x0a,0x00};
 static uint8_t RSP_GATT_READ_DES[] = {0x02,XXXX,XXXX,0x07,0x00,0x03,0x00,0x04,0x00,0x0b,0x01,0x00};
-static uint8_t SEND_GATT_KEY[] = {0x02,XXXX,XXXX,0x0f,0x00,0x0b,0x00,0x04,0x00,0x1B,0x05,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};//LC/LS/LA/LG/RC/RS/RA/RG/K1-K6
-static uint8_t SEND_GATT_MOUSE_EVT[] = {0x02,XXXX,XXXX,0x0f,0x00,0x0b,0x00,0x04,0x00,0x1B,0x09,0x00,0x00,0x01,0x00,0x01,0x00,0x00};//B1-B8/X/Y/W
 static uint8_t RECV_NUM_CMP[] = {0x04,0x13,0x05,0x01,XXXX,XXXX,XXXX,XXXX};
 
 static uint8_t RECV_RECONNECT_LTK_REQ[] = {0x04,0x3e,0x0d,0x05,XXXX,XXXX,XXXX,XXXX,XXXX,XXXX,XXXX,XXXX,XXXX,XXXX,};
@@ -221,9 +193,11 @@ static uint8_t RSP_GATT_FIND_SVC_BY_TYPE_ERR[] = {0x02,XXXX,XXXX,0x09,0x00,0x05,
 static uint8_t RECV_GATT_OTHERS_REQ[] = {0x02,XXXX,XXXX,XXXX,XXXX,XXXX,XXXX,0x04,0x00,XXXX};
 static uint8_t RSP_GATT_OTHERS_ERR_RSP[] = {0x02,XXXX,XXXX,0x09,0x00,0x05,0x00,0x04,0x00,0x01,0x06,0x10,0x00,0x0a};
 
-static void send_hid(uint8_t *buf, uint8_t len)
+void send_hid(uint8_t *buf, uint8_t len)
 {
-	if(buf) hci_send(buf, len);
+	int res;
+	if(buf) res = hci_send(buf, len);
+	if(res < 0){ hci_reinit(send_reset); }
 	return;
 	if(buf){
 		if(_fr == (uint8_t)(_ra+1)) return;
@@ -238,7 +212,7 @@ static void send_hid(uint8_t *buf, uint8_t len)
 	}
 }
 
-static void bt_recv_cb(char *d, int len)
+void bt_recv_cb(uint8_t *d, int len)
 {
 	static int direct_adv_cnt;
 	if(0){}
@@ -487,9 +461,10 @@ static void bt_recv_cb(char *d, int len)
 		memcpy(&RSP_GATT_OTHERS_ERR_RSP[10], &d[9], 3);
 		SEND(RSP_GATT_OTHERS_ERR_RSP);
 	}
-
 }
-
+void send_reset(void){ SEND(CMD_RESET); }
+bool HID_ENABLED(void){ return hid_enabled>1; }
+void SET_HANDLE(uint8_t *data, int offset){ *(uint16_t*)&data[offset] = conn_handle; }
 #if 0
 int main(int argc, char *argv[])
 {

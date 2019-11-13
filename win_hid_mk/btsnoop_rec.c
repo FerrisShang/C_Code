@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
 #include <sys/time.h>
 
@@ -26,11 +27,11 @@ static long long* current_timestamp(void)
 	return &milliseconds;
 }
 
-FILE *create_btsnoop_rec(char *path)
+FILE *create_btsnoop_rec(const char *path)
 {
-	char *id = "btsnoop";
+	char *id = (char*)"btsnoop";
 	char version[] = {0x00,0x00,0x00,0x01};
-	char type[] = {0x00,0x00,0x03,0xEA};
+	uint8_t type[] = {0x00,0x00,0x03,0xEA};
 	FILE *fp = NULL;
 	fp=fopen(path, "wb");
 	if(fp == NULL)
@@ -49,7 +50,7 @@ void close_btsnoop_rec(FILE *fp)
 	fclose(fp);
 }
 
-void record_btsnoop(FILE *fp, char *hci_data, int data_len, char data_dir)
+void record_btsnoop(FILE *fp, uint8_t *hci_data, int data_len, char data_dir)
 {
 	int tLen = data_len;
 	char drops[4] = {0,0,0,0};

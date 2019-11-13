@@ -1,7 +1,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include "win_hid_map.c"
-#include "hid.c"
+#include "hid.h"
 
 #define DEBUG 0
 
@@ -123,7 +123,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	hci_init(0, bt_recv_cb);
 	//hci_init(USB_LOG_BTSNOOP, bt_recv_cb);
-	SEND(CMD_RESET);
+	send_reset();
 	while(GetMessage(&msg, NULL, 0, 0) > 0) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
