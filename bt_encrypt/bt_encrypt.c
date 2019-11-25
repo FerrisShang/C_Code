@@ -1,12 +1,26 @@
 #include "bt_encrypt.h"
+#include "stdlib.h"
 
 /* ALG based on https://github.com/traviscross/bgaes */
 #include "alg/aes.h"
 #include "alg/cmac.h"
+/* uEcc */
+#include "alg/uECC.h"
 
 
 #define bxor(data, in_out, len) do{int l=len; while(l--){ in_out[l] ^= data[l]; } }while(0)
-#define brev(data, len) do{int l=len/2; while(l--){ uint8_t t = data[l]; data[l] = data[len-l-1]; data[len-l-1] = t; }}while(0)
+#define brev(data, len) \
+	do{int l=len/2;\
+		while(l--){\
+			uint8_t t = ((uint8_t*)data)[l];\
+			((uint8_t*)data)[l] = ((uint8_t*)data)[len-l-1];\
+			((uint8_t*)data)[len-l-1] = t;\
+		}\
+	}while(0)
+
+/**************************************************************************
+ * Bluetooth Cryptographic Toolbox, All variable is LITTLE ENDIAN!!
+ *************************************************************************/
 
 void btc_e(uint8_t *key, uint8_t *in_out)
 {
@@ -27,46 +41,28 @@ void btc_ah(uint8_t *irk, uint8_t *rand, uint8_t *out)
 
 void btc_s1(uint8_t *k, uint8_t *r1, uint8_t *r2, uint8_t *out)
 {
-	int i;
-	static uint8_t key[16];
-	for(i=0;i<8;i++){
-		out[i+0] = r1[8-1-i];
-		out[i+8] = r2[8-1-i];
-	}
-	for(i=0;i<16;i++){ key[i] = k[16-1-i]; }
-	btc_e(key, out);
-	brev(out, 16);
+	memcpy(&out[0], r1, 8);
+	memcpy(&out[8], r2, 8);
+	btc_e(k, out);
 }
 
 void btc_c1(uint8_t *k, uint8_t *r, uint8_t *preq, uint8_t *pres,
 		uint8_t iat, uint8_t rat, uint8_t *ia, uint8_t *ra, uint8_t *out)
 {
-	static uint8_t p2[16];
-	static uint8_t key[16];
-	int i;
-	for(i=0;i<7;i++){
-		out[i+0] = pres[7-1-i];
-		out[i+7] = preq[7-1-i];
-	}
-	out[14] = rat; out[15] = iat;
-	for(i=0;i<16;i++){ out[i] ^= r[16-1-i]; }
-	for(i=0;i<16;i++){ key[i] = k[16-1-i]; }
-	btc_e(key, out);
-	for(i=0;i<6;i++){
-		p2[i+4]  = ia[6-1-i];
-		p2[i+10] = ra[6-1-i];
+	uint8_t p1[16] = {0};
+	uint8_t p2[16] = {0};
+	memcpy(&p1[0], pres, 7);
+	memcpy(&p1[7], preq, 7);
+	p1[14] = rat; p1[15] = iat;
+	memcpy(out, r, 16);
+	bxor(p1, out, 16);
+	btc_e(k, out);
+	for(int i=0;i<6;i++){
+		memcpy(&p2[4], ia, 6);
+		memcpy(&p2[10], ra, 6);
 	}
 	bxor(p2, out, 16);
-	btc_e(key, out);
-	brev(out, 16);
-}
-
-void btc_confirm_value(uint8_t *tk, uint8_t *rand, uint8_t *req_cmd, uint8_t *rep_cmd,
-		uint8_t init_dev_addr_type, uint8_t *init_dev_addr,
-		uint8_t rsp_dev_addr_type, uint8_t *rsp_dev_addr, uint8_t *out)
-{
-	btc_c1(tk, rand, req_cmd, rep_cmd, init_dev_addr_type,
-			rsp_dev_addr_type, init_dev_addr, rsp_dev_addr, out);
+	btc_e(k, out);
 }
 
 void btc_aes_cmac(const uint8_t *k, uint8_t *data, int len, uint8_t *out)
@@ -126,5 +122,99 @@ void btc_h6(const uint8_t *w, uint8_t *keyId, uint8_t *out)
 void btc_h7(const uint8_t *salt, uint8_t *w, uint8_t *out)
 {
 	btc_aes_cmac(salt, w, 16, out);
+}
+
+static int uECC_RNG(uint8_t *dest, unsigned size)
+{
+	for(int i=0;i<size;i++){ dest[i] = rand() & 0xFF; }
+}
+
+
+/**************************************************************************
+ * Bluetooth Cryptographic Toolbox, All variable is BIG ENDIAN!!
+ *************************************************************************/
+void btc_hash(uint8_t *irk, uint8_t *rand, uint8_t *out)
+{
+	uint8_t _irk[16], _rand[16];
+	for(int i=0;i<16;i++){ _irk[i] = irk[16-1-i]; _rand[i] = rand[16-1-i]; }
+	btc_ah(_irk, _rand, out);
+	brev(out, 3);
+}
+void btc_stk(uint8_t *tk, uint8_t *rrand, uint8_t *irand, uint8_t *out)
+{
+	uint8_t key[16];
+	uint8_t r1[16], r2[16];
+	for(int i=0;i<8;i++){
+		r1[i] = rrand[8-1-i];
+		r2[i] = irand[8-1-i];
+	}
+	for(int i=0;i<16;i++){ key[i] = tk[16-1-i]; }
+	btc_s1(key, r1, r2, out);
+	brev(out, 16);
+}
+void btc_legacy_confirm(uint8_t *tk, uint8_t *rand, uint8_t *preq, uint8_t *pres,
+		uint8_t iat, uint8_t *ia, uint8_t rat, uint8_t *ra, uint8_t *out)
+{
+	int i;
+	uint8_t _tk[16]; uint8_t _rand[16];
+	uint8_t _preq[7]; uint8_t _pres[7];
+	uint8_t _ia[6]; uint8_t _ra[6];
+	for(i=0;i<16;i++){ _tk[i] = tk[16-i-1]; _rand[i] = rand[16-i-1]; }
+	for(i=0;i<7;i++){ _preq[i] = preq[7-i-1]; _pres[i] = pres[7-i-1]; }
+	for(i=0;i<6;i++){ _ia[i] = ia[6-i-1]; _ra[i] = ra[6-i-1]; }
+	btc_c1(_tk, _rand, _preq, _pres, iat, rat, _ia, _ra, out);
+	brev(out, 16);
+}
+
+void btc_sc_confirm(uint8_t *pk1, uint8_t *pk2, uint8_t *rand, uint8_t ri, uint8_t *out)
+{
+	uint8_t _pk1[32], _pk2[32], _rand[16];
+	//for(int i=0;i<32;i++){ _pk1[32-i-1] = pk1[i]; _pk2[32-i-1] = pk2[i]; }
+	for(int i=0;i<16;i++){ _rand[16-i-1] = rand[i]; }
+	//btc_f4(_pk1, _pk2, _rand, ri, out);
+	btc_f4(pk1, pk2, _rand, ri, out);
+	brev(out, 16);
+}
+
+void btc_dhkey(uint8_t *pubKey, uint8_t *privKey, uint8_t *out)
+{
+	static uECC_Curve c = NULL;
+	if(!c){
+		c = uECC_secp256r1();
+		uECC_set_rng(uECC_RNG);
+	}
+	uint8_t private_key[32];
+	uint8_t public_key[64];
+	for(int i=0;i<32;i++){ private_key[32-i-1] = privKey[i]; }
+	for(int i=0;i<32;i++){ public_key[32-i-1] = pubKey[i]; }
+	for(int i=0;i<32;i++){ public_key[64-i-1] = pubKey[32+i]; }
+	uECC_shared_secret(public_key, private_key, out, c);
+	brev(out, 32);
+}
+
+void btc_mackey_ltk(uint8_t *dhkey, uint8_t *irand, uint8_t *rrand, uint8_t *ia_t, uint8_t *ra_t, uint8_t *out)
+{
+	uint8_t _irand[16], _rrand[16], _ia[7], _ra[7];
+	for(int i=0;i<16;i++){ _irand[16-i-1] = irand[i]; _rrand[16-i-1] = rrand[i]; }
+	for(int i=0;i<7;i++){ _ia[7-i-1] = ia_t[i]; _ra[7-i-1] = ra_t[i]; }
+	btc_f5(dhkey, _irand, _rrand, _ia, _ra, out);
+	brev(&out[0], 16); brev(&out[16], 16);
+}
+
+void btc_dhkey_check(uint8_t *mackey, uint8_t *n1, uint8_t *n2, uint8_t *r,
+		uint8_t *iocap, uint8_t *a1_t, uint8_t *a2_t, uint8_t *out)
+{
+
+	static uint8_t r0[16] = {0};
+	uint8_t _mackey[16], _n1[16], _n2[16], _r[16], _iocap[3], _a1[7], _a2[7];
+	if(!r) r = r0;
+	for(int i=0;i<16;i++){
+		_mackey[16-i-1] = mackey[i]; _r[16-i-1] = r[i];
+		_n1[16-i-1] = n1[i]; _n2[16-i-1] = n2[i];
+	}
+	for(int i=0;i<3;i++){ _iocap[i] = iocap[3-i-1]; }
+	for(int i=0;i<7;i++){ _a1[i] = a1_t[7-i-1]; _a2[i] = a2_t[7-i-1]; }
+	btc_f6(_mackey, _n1, _n2, _r, _iocap, _a1, _a2, out);
+	brev(out, 16);
 }
 

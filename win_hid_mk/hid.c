@@ -256,7 +256,7 @@ void bt_recv_cb(uint8_t *d, int len)
 		SEND(RSP_SMP_PAIRING);
 	}IF(RECV_SMP_PAIRING_CFM){
 		RAND(rrand, 16);
-		btc_confirm_value(tk, rrand, smp_req, smp_rsp, iat, ia, rat, ra, &RSP_SMP_PAIRING_CFM[10]);
+		btc_legacy_confirm(tk, rrand, smp_req, smp_rsp, iat, ia, rat, ra, &RSP_SMP_PAIRING_CFM[10]);
 		#if 0
 			printf("rrand ->  "); DUMP(rrand, 16);
 			printf("smp_req ->  "); DUMP(smp_req, 7);
@@ -274,7 +274,7 @@ void bt_recv_cb(uint8_t *d, int len)
 		SEND(RSP_SMP_PAIRING_RND);
 	}IF(RECV_STK_REQ){
 		SET_HANDLE(RSP_RECV_LTK, 4);
-		btc_s1(tk, rrand, irand, &RSP_RECV_LTK[6]);
+		btc_stk(tk, rrand, irand, &RSP_RECV_LTK[6]);
 		SEND(RSP_RECV_LTK);
 	}IF(RECV_ENC_CHANGE){
 		encrypted = true;
