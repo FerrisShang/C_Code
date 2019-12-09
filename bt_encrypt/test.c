@@ -4,6 +4,7 @@
 
 #include "alg/cmac.h"
 #include "alg/uECC.h"
+#include "alg/ccm.h"
 
 #define brev(data, len) \
 	do{int l=len/2;\
@@ -418,7 +419,56 @@ void test(void)
 		btc_dhkey_check(macKey_LTK, randB, randA, NULL, iocapB, ra, ia, out);
 		printf("DHKey(Eb):  "); DUMP(out, 16);
 	}
+	{
+	/******************************************************
+	 * Long Term Key: 6445a18b7ff378026e3adf1b61a126b4
+	 * LCP Encryption Request
+	 * 	03 17 03 00 00 00 00 00 00 00 00 00 00 6D 4B F5 8E B9 6D 2F DD 8F A7 24 85
+	 * SKDm (Session Key Diversifier Master Portion)
+	 * 	6D 4B F5 8E B9 6D 2F DD
+	 * IVm (Init. Vector Master Portion)
+	 * 	8F A7 24 85
+	 * LCP Encryption Response
+	 * 	1B 0D 04 EC D4 DB 64 70 F7 AE 2D 28 1D F6 AC
+	 * SKDs (Session Key Diversifier Slave Portion)
+	 * 	EC D4 DB 64 70 F7 AE 2D
+	 * IVs (Init. Vector Slave Portion)
+	 * 	28 1D F6 AC
 
+	 * LLCP Start Encryption Request(1B 01 05 FD D4 FA)
+	 * LLCP Start Encryption Response(Master)
+	 * 	Plaintext: 0F 05 06 92 D4 6E D7 F8 FD 14
+	 * 	encrypted: 0F 05 47 78 E7 DB 90 F8 FD 14
+	 * LLCP Start Encryption Response(Slave)
+	 * 	Plaintext: 17 05 06 F6 BF 9D 49 AD DB 78
+	 * 	encrypted: 17 05 C8 EB 9C 0A 0C AD DB 78
+	 ******************************************************/
+		uint8_t ltk[] = {
+			0x64,0x45,0xa1,0x8b,0x7f,0xf3,0x78,0x02,0x6e,0x3a,0xdf,0x1b,0x61,0xa1,0x26,0xb4
+		};
+		uint8_t SKDm[] = {0x6D,0x4B,0xF5,0x8E,0xB9,0x6D,0x2F,0xDD};
+		uint8_t SKDs[] = {0xEC,0xD4,0xDB,0x64,0x70,0xF7,0xAE,0x2D};
+		uint8_t IVm[] = {0x8F,0xA7,0x24,0x85};
+		uint8_t IVs[] = {0x28,0x1D,0xF6,0xAC};
+
+		uint8_t llid_master = 0x0F, llid_slave = 0x17, mic[4];
+		uint8_t plaintext_master[] = {0x06}; uint8_t plaintext_slave[] = {0x06};
+
+		btc_ll_enc_ctx_t ctx;
+		btc_ll_enc_ctx(SKDm, SKDs, ltk, IVm, IVs, &ctx);
+
+		btc_ll_encrypt(&ctx, 0, 1, llid_master, plaintext_master, sizeof(plaintext_master), NULL, mic);
+		printf("LL encrypted data(M): "); DUMP(plaintext_master, sizeof(plaintext_master));
+		printf("LL encrypted mic(M):  "); DUMP(mic, 4);
+		btc_ll_decrypt(&ctx, llid_master, plaintext_master, sizeof(plaintext_master), NULL, mic);
+		printf("LL decrypted data(M): "); DUMP(plaintext_master, sizeof(plaintext_master));
+
+		btc_ll_encrypt(&ctx, 0, 0, llid_slave, plaintext_slave, sizeof(plaintext_slave), NULL, mic);
+		printf("LL encrypted data(S): "); DUMP(plaintext_slave, sizeof(plaintext_slave));
+		printf("LL encrypted mic(S):  "); DUMP(mic, 4);
+		btc_ll_decrypt(&ctx, llid_master, plaintext_slave, sizeof(plaintext_slave), NULL, mic);
+		printf("LL decrypted data(S): "); DUMP(plaintext_slave, sizeof(plaintext_slave));
+	}
 }
 
 int main()

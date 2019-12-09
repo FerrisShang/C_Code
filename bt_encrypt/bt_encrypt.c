@@ -6,6 +6,8 @@
 #include "alg/cmac.h"
 /* uEcc */
 #include "alg/uECC.h"
+/* ccm */
+#include "alg/ccm.h"
 
 
 #define bxor(data, in_out, len) do{int l=len; while(l--){ in_out[l] ^= data[l]; } }while(0)
@@ -216,5 +218,37 @@ void btc_dhkey_check(uint8_t *mackey, uint8_t *n1, uint8_t *n2, uint8_t *r,
 	for(int i=0;i<7;i++){ _a1[i] = a1_t[7-i-1]; _a2[i] = a2_t[7-i-1]; }
 	btc_f6(_mackey, _n1, _n2, _r, _iocap, _a1, _a2, out);
 	brev(out, 16);
+}
+
+void btc_ll_enc_ctx(uint8_t *SKDm, uint8_t *SKDs, uint8_t *LTK,
+		uint8_t *IVm, uint8_t *IVs, btc_ll_enc_ctx_t *ctx)
+{
+	int8_t ltk[16];
+	memcpy(ctx->IV, IVm, 4); memcpy(&ctx->IV[4], IVs, 4);
+	for(int i=0;i<16;i++){ ltk[16-i-1] = LTK[i]; }
+	for(int i=0;i<8;i++){ ctx->SK[16-i-1] = SKDm[i]; ctx->SK[8-i-1] = SKDs[i]; }
+	btc_e(ltk, ctx->SK);
+	ccm_init_and_key(ctx->SK, 16, &ctx->ctx);
+	memcpy(ctx->nonce + 5, ctx->IV, 8);
+}
+
+void btc_ll_encrypt(btc_ll_enc_ctx_t *ctx, const uint32_t counter, const uint8_t isMaster,
+		uint8_t LLID, uint8_t *data, uint8_t len, uint8_t *out, uint8_t *mic)
+{
+	ctx->nonce[4] = isMaster?0x80:0x00;
+	*(uint32_t*)ctx->nonce = counter;
+	LLID &= 0x03;
+	if(out){ memcpy(out, data, len); } else { out = data; }
+	ccm_encrypt_message(ctx->nonce, 13, &LLID, 1, (unsigned char*)out, len,
+			(unsigned char*)mic, 4, &ctx->ctx);
+}
+
+int btc_ll_decrypt(btc_ll_enc_ctx_t *ctx, uint8_t LLID, unsigned char *data,
+		unsigned long len, uint8_t *out, uint8_t *mic)
+{
+	LLID &= 0x03;
+	if(out){ memcpy(out, data, len); } else { out = data; }
+	return ccm_decrypt_message(ctx->nonce, 13, &LLID, 1, (unsigned char*)out, len,
+			(unsigned char*)mic, 4, &ctx->ctx);
 }
 
