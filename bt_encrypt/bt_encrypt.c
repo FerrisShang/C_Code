@@ -252,3 +252,48 @@ int btc_ll_decrypt(btc_ll_enc_ctx_t *ctx, uint8_t LLID, unsigned char *data,
 			(unsigned char*)mic, 4, &ctx->ctx);
 }
 
+uint32_t btc_crc24(uint32_t init_crc, uint8_t *buf, int len) {
+	static int init_flag, i;
+	static uint32_t crc24_table[256];
+	if(!init_flag) {//init_crc24()
+		for (i = 0; i < 256; i++) {
+			uint32_t _crc = 0;
+			uint32_t c = i;
+			for (int j = 0; j < 8; j++) {
+				if ((_crc ^ c) & 0x1)
+					//poly: 24,10,9,6,4,3,1,0
+					_crc = (_crc >> 1) ^ 0xDA6000; // Polynomial, bit reverse of 0x00065B
+				else
+					_crc = _crc >> 1;
+				c = c >> 1;
+			}
+			crc24_table[i] = _crc;
+		}
+		init_flag = 1;
+	}
+	// bit reverse
+	uint32_t crc = 0;
+	for(i=0;i<24;i++){
+		crc = (crc << 1) | (init_crc & 1);
+		init_crc >>= 1;
+	}
+	//crc = crc & 0xFFFFFF;
+	for(i=0;i<len;i++) { crc = ((crc >> 8) ^ crc24_table[(crc ^ buf[i]) & 0xFF]); }
+	return crc;
+}
+
+void btc_whitening(uint8_t* data, uint8_t len, uint8_t ch_idx)
+{
+	ch_idx = (ch_idx << 1) | 0x80;
+	while (len--){
+		for (uint8_t i = 1; i; i <<= 1){
+			ch_idx >>= 1;
+			if (ch_idx & 1){
+				ch_idx ^= 0x88; // pos0 & pos4
+				(*data) ^= i;
+			}
+		}
+		data++;
+	}
+}
+

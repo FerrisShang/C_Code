@@ -34,11 +34,6 @@ void btc_dhkey(uint8_t *pubKey, uint8_t *privKey, uint8_t *out);
 void btc_mackey_ltk(uint8_t *dhkey, uint8_t *irand, uint8_t *rrand, uint8_t *ia_t, uint8_t *ra_t, uint8_t *out);
 void btc_dhkey_check(uint8_t *mackey, uint8_t *n1, uint8_t *n2, uint8_t *r,
 		uint8_t *iocap, uint8_t *a1_t, uint8_t *a2_t, uint8_t *out);
-//void btc_cal_sk_iv(uint8_t *SKDm, uint8_t *SKDs, uint8_t *LTK, uint8_t *out_SK,
-//		uint8_t *IVm, uint8_t *IVs, uint8_t *out_IV);
-//void btc_ll_encrypt(const uint8_t *SK, const uint8_t *IV, const uint32_t counter,
-//		const uint8_t isMaster, uint8_t LLID, uint8_t *data, uint8_t len, uint8_t *out, uint8_t *mic);
-
 #include "alg/ccm.h"
 typedef struct {
 	uint8_t LTK[16];
@@ -47,13 +42,14 @@ typedef struct {
 	uint8_t nonce[13];
 	ccm_ctx  ctx;
 } btc_ll_enc_ctx_t;
-
 void btc_ll_enc_ctx(uint8_t *SKDm, uint8_t *SKDs, uint8_t *LTK,
 		uint8_t *IVm, uint8_t *IVs, btc_ll_enc_ctx_t *ctx);
 void btc_ll_encrypt(btc_ll_enc_ctx_t *ctx, const uint32_t counter, const uint8_t isMaster,
 		uint8_t LLID, uint8_t *data, uint8_t len, uint8_t *out, uint8_t *mic);
 int btc_ll_decrypt(btc_ll_enc_ctx_t *ctx, uint8_t LLID, unsigned char *data,
 		unsigned long len, uint8_t *out, uint8_t *mic);
+uint32_t btc_crc24(uint32_t crc, uint8_t *buf, int len);
+void btc_whitening(uint8_t* data, uint8_t len, uint8_t ch_idx);
 
 #endif /* __BT_ENCRYPT_H__ */
 
