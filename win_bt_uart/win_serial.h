@@ -28,13 +28,16 @@ class CSerial{
 			// Baudrate config
 			DCB dcbSerialParams = {0};
 			dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-			Status = GetCommState(hComm, &dcbSerialParams);
-			if(Status != 1) return SERIAL_OTHER_ERROR;
 			dcbSerialParams.BaudRate = baudrate;
 			dcbSerialParams.ByteSize = 8;
 			dcbSerialParams.StopBits = ONESTOPBIT;
 			dcbSerialParams.Parity = NOPARITY;
+			dcbSerialParams.fBinary = true;
 			SetCommState(hComm, &dcbSerialParams);
+			DCB dcb = {0};
+			dcb.DCBlength = sizeof(DCB);
+			Status = GetCommState(hComm, &dcb);
+			//PrintCommState(dcbSerialParams);
 			// Timeout config
 			COMMTIMEOUTS timeouts = {0};
 			timeouts.ReadIntervalTimeout = recv_tout;
@@ -58,7 +61,13 @@ class CSerial{
 		inline void write(const uint8_t *data, int len){
 			DWORD num;
 			if(hComm){
+#if 0
+				for(int i=0;i<len;i+=32){
+					WriteFile(hComm, &data[i], min(len-i,32), &num, NULL);
+				}
+#else
 				WriteFile(hComm, data, len, &num, NULL);
+#endif
 			}
 		}
 		int read(uint8_t *buf, int len){
@@ -96,10 +105,10 @@ class CBtIO: CSerial{
 	void *cb_param;
 	public:
 	int start(char *port, int baudrate){
-		int res = open(port, baudrate, 50);
+		int res = open(port, baudrate, 500);
 		if(res != SERIAL_SUCCESS){ return res; }
 		if(!read_thread){ read_thread = new thread(__read__, this); }
-		while(exit_flag);
+		while(exit_flag)Sleep(1);
 		return SERIAL_SUCCESS;
 	}
 	int start(int port_num, int baudrate){

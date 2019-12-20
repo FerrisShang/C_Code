@@ -39,10 +39,11 @@ class CScriptParse {
 	}
 	~CScriptParse(){
 		FORBE(cmd_line, cmd_lines){
-			dump_line(*cmd_line);
+			//dump_line(*cmd_line);
 			free_line(*cmd_line);
 		}
 	}
+	void dump_lines(void){ FORBE(cmd_line, cmd_lines){ dump_line(*cmd_line); } }
 	void parse_file(vector<cmd_line_t*> &cmd_lines, char*file_name){
 		FILE *fp = fopen(file_name, "r");
 		if(fp == NULL) return;
@@ -170,6 +171,7 @@ class CScriptParse {
 			char processed_flag = false;
 			FOR(cur_idx, pending_num){
 				sc_cmd_recv_t *list = &cmd_lines[current_pos+cur_idx]->recv;
+				if(!(pending_flag & (1<<cur_idx))) continue;
 				int recv_pos = 0;
 				char error = false;
 				FOR(i, list->len){
@@ -222,12 +224,14 @@ class CScriptParse {
 				}
 				if(!error){
 					pending_flag &= ~(1<<cur_idx);
-				}
-				if(((~(~0 << pending_num)) & pending_flag) == 0){
 					processed_flag = true;
-					current_pos += pending_num;
-					pending_num = 0;
-					return get_send_data(NULL, 0, data);
+					if(((~(~0 << pending_num)) & pending_flag) == 0){
+						current_pos += pending_num;
+						pending_num = 0;
+						return get_send_data(NULL, 0, data);
+						break;
+					}
+					break;
 				}
 			}
 			if(!processed_flag){
