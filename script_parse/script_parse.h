@@ -70,10 +70,10 @@ class CScriptParse {
 		fclose(fp);
 	}
 	int get_timeout(void){ return timeout; }
-	void script_end(void){ puts("script end."); exit(0); }
+	vector<vector<uint8_t>> script_end(void){ puts("script end."); return vector<vector<uint8_t>>{}; }
 	vector<vector<uint8_t>> get_send_data(uint8_t *received, int recv_len, vector<vector<uint8_t>> data={}){
 		//vector<vector<uint8_t>> data;
-		if(current_pos == cmd_lines.size()){ script_end(); }
+		if(current_pos == cmd_lines.size()){ return script_end(); }
 		while(cmd_lines[current_pos]->type != SC_CMD_RECV || mode == SC_MODE_CALLBACK){
 			cmd_line_t *cmd = cmd_lines[current_pos];
 			switch(cmd->type){
@@ -159,7 +159,7 @@ class CScriptParse {
 				case SC_CMD_REMARK:
 					break;
 			}
-			if(++current_pos == cmd_lines.size()){ script_end(); }
+			if(++current_pos == cmd_lines.size()){ return script_end(); }
 		}
 		//Process received data
 		if(pending_num == 0){
@@ -240,7 +240,7 @@ class CScriptParse {
 					SC_OUTPUT("%02X ", received[i]);
 				}
 				SC_OUTPUT("\n");
-				script_end();
+				return script_end();
 				// TODO: Global callback check
 			}
 		}

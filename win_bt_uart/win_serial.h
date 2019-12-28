@@ -17,7 +17,7 @@ class CSerial{
 		HANDLE hComm;
 		int recv_tout;
 		CSerial(){hComm = 0;}
-		int open(char *port, int baudrate, int recv_tout=200){
+		int open(const char *port, int baudrate, int recv_tout=200){
 			this->recv_tout = recv_tout;
 			int Status;
 			char port_str[16] = "\\\\.\\";
@@ -104,7 +104,7 @@ class CBtIO: CSerial{
 	void (*callback)(vector<uint8_t>& data, void *param);
 	void *cb_param;
 	public:
-	int start(char *port, int baudrate){
+	int start(const char *port, int baudrate){
 		int res = open(port, baudrate, 500);
 		if(res != SERIAL_SUCCESS){ return res; }
 		if(!read_thread){ read_thread = new thread(__read__, this); }

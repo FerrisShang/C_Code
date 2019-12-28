@@ -22,7 +22,7 @@ int main(void)
 	DUMP(send_data);
 	send_data = scParse.get_send_data((uint8_t*)"\x01\x12\x54\x02", 4);
 	DUMP(send_data);
-	scParse.dump();
+	scParse.dump_lines();
 }
 
 
