@@ -28,6 +28,7 @@ enum{
 	SC_CMD_DEBUG,
 	SC_CMD_EXIT,
 	SC_CMD_REMARK,
+	SC_CMD_DELAY,
 };
 
 enum{
@@ -112,6 +113,10 @@ typedef struct {
 }sc_cmd_remark_t;
 
 typedef struct {
+	int delay_ms;
+}sc_cmd_delay_t;
+
+typedef struct {
 	int type;
 	union{
 		sc_cmd_import_t import;
@@ -124,6 +129,7 @@ typedef struct {
 		sc_cmd_debug_t debug;
 		sc_cmd_exit_t exit;
 		sc_cmd_remark_t remark;
+		sc_cmd_delay_t delay;
 	};
 }cmd_line_t;
 

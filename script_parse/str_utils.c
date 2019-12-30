@@ -17,6 +17,7 @@ static sc_var_t sc_com[] = {
 	{ SC_CMD_DEBUG,   "DEBUG"   },
 	{ SC_CMD_EXIT,    "EXIT"    },
 	{ SC_CMD_REMARK,  "#"  },
+	{ SC_CMD_DELAY,   "DELAY"  },
 };
 
 static sc_var_t sc_def[] = {
@@ -344,6 +345,16 @@ cmd_line_t* parse_line(char *str)
 			}
 			}break;
 		case SC_CMD_REMARK:{
+			}break;
+		case SC_CMD_DELAY:{
+			p = get_var_dec(str, &pos, 0, &len);
+			if(len > 0){
+				char delay[32] = {0};
+				memcpy(delay, p, len);
+				ret->delay.delay_ms = atoi(delay);
+			}else{
+				assert(0); // set data invalid
+			}
 			}break;
 		default:
 			break;

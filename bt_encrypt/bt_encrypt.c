@@ -252,7 +252,8 @@ int btc_ll_decrypt(btc_ll_enc_ctx_t *ctx, uint8_t LLID, unsigned char *data,
 			(unsigned char*)mic, 4, &ctx->ctx);
 }
 
-uint32_t btc_crc24(uint32_t init_crc, uint8_t *buf, int len) {
+uint32_t btc_crc24(uint32_t init_crc, uint8_t *buf, int len)
+{
 	static int init_flag, i;
 	static uint32_t crc24_table[256];
 	if(!init_flag) {//init_crc24()

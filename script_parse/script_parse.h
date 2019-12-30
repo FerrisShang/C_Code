@@ -3,12 +3,15 @@
 
 #include "stdio.h"
 #include "stdlib.h"
+#include "unistd.h"
 #include "string.h"
 #include "str_utils.h"
 #include <vector>
 #include <assert.h>
+#include <string>
 #include <map>
 #include <stack>
+#include <mutex>
 #define FOR(_I_, _N_) for(int _I_=0;_I_<_N_;_I_++)
 #define FORBE(_I_, _T_) for(auto _I_=_T_.begin();_I_!=_T_.end();_I_++)
 using namespace std;
@@ -19,6 +22,8 @@ class CScriptParse {
 	int timeout;
 	int current_pos;
 	int mode;
+	string title;
+	mutex *mtx;
 	uint32_t pending_flag;
 	uint32_t pending_num;
 	map<const string, sc_cmd_value_t> variable_pool;
@@ -28,14 +33,18 @@ class CScriptParse {
 		int cur_value;
 	};
 	stack<struct for_stack> for_stack;
+	bool finished;
 	public:
-	CScriptParse(char *file_name){
+	CScriptParse(char *file_name, const char*title=NULL, mutex *mtx=NULL){
 		parse_file(cmd_lines, file_name);
 		current_pos = 0;
-		timeout = 3;
+		timeout = 300;
 		mode = SC_MODE_SEQUENCE;
 		pending_num = 0;
 		pending_flag = 0;
+		if(title) this->title = string(title) + string(": ");
+		this->mtx = mtx;
+		finished = false;
 	}
 	~CScriptParse(){
 		FORBE(cmd_line, cmd_lines){
@@ -43,6 +52,7 @@ class CScriptParse {
 			free_line(*cmd_line);
 		}
 	}
+	bool isFinished(void){ return finished; }
 	void dump_lines(void){ FORBE(cmd_line, cmd_lines){ dump_line(*cmd_line); } }
 	void parse_file(vector<cmd_line_t*> &cmd_lines, char*file_name){
 		FILE *fp = fopen(file_name, "r");
@@ -59,8 +69,11 @@ class CScriptParse {
 				}else{
 					cmd_lines.push_back(p);
 					if(cmd_lines.size() > 1024){
+						if(mtx)mtx->lock();
+						if(title.length()) SC_OUTPUT(title.c_str());
 						puts("Maximum lines exceeded !");
-						exit(0);
+						if(mtx)mtx->unlock();
+						return;
 					}
 				}
 			}else{
@@ -70,7 +83,14 @@ class CScriptParse {
 		fclose(fp);
 	}
 	int get_timeout(void){ return timeout; }
-	vector<vector<uint8_t>> script_end(void){ puts("script end."); return vector<vector<uint8_t>>{}; }
+	vector<vector<uint8_t>> script_end(void){
+		if(mtx)mtx->lock();
+		if(title.length()) SC_OUTPUT(title.c_str());
+		puts("script end.");
+		if(mtx)mtx->unlock();
+		finished = true;
+		return vector<vector<uint8_t>>{};
+	}
 	vector<vector<uint8_t>> get_send_data(uint8_t *received, int recv_len, vector<vector<uint8_t>> data={}){
 		//vector<vector<uint8_t>> data;
 		if(current_pos == cmd_lines.size()){ return script_end(); }
@@ -80,7 +100,9 @@ class CScriptParse {
 				case SC_CMD_DEFINE:{
 					sc_cmd_value_t value = *(sc_cmd_value_t*)&cmd->define;
 					value.type = SC_VT_HEX;
-					variable_pool[cmd->define.name] = value;
+					if(!variable_pool.count(cmd->define.name)){
+						variable_pool[cmd->define.name] = value;
+					}
 					}break;
 				case SC_CMD_SEND:
 					if(mode != SC_MODE_CALLBACK){
@@ -134,6 +156,8 @@ class CScriptParse {
 					}break;
 				case SC_CMD_DEBUG:
 				case SC_CMD_EXIT:
+					if(mtx)mtx->lock();
+					if(title.length()) SC_OUTPUT(title.c_str());
 					SC_OUTPUT("*** ");
 					FOR(i, cmd->debug.len){
 						sc_cmd_value_t *data = &cmd->debug.data_list[i];
@@ -154,9 +178,17 @@ class CScriptParse {
 						}
 					}
 					SC_OUTPUT("\n");
-					if(cmd->type == SC_CMD_EXIT) exit(0);
+					if(mtx)mtx->unlock();
+					if(cmd->type == SC_CMD_EXIT) return script_end();
 					break;
 				case SC_CMD_REMARK:
+					break;
+				case SC_CMD_DELAY:
+					if(mtx)mtx->lock();
+					if(title.length()) SC_OUTPUT(title.c_str());
+					SC_OUTPUT("delay %d ms\n", cmd->delay.delay_ms);
+					if(mtx)mtx->unlock();
+					sleep(cmd->delay.delay_ms/1000.0);
 					break;
 			}
 			if(++current_pos == cmd_lines.size()){ return script_end(); }
@@ -235,11 +267,14 @@ class CScriptParse {
 				}
 			}
 			if(!processed_flag){
+				if(mtx)mtx->lock();
+				if(title.length()) SC_OUTPUT(title.c_str());
 				SC_OUTPUT("Fatal error: Unexpected data received!\n\t");
 				FOR(i, recv_len){
 					SC_OUTPUT("%02X ", received[i]);
 				}
 				SC_OUTPUT("\n");
+				if(mtx)mtx->unlock();
 				return script_end();
 				// TODO: Global callback check
 			}

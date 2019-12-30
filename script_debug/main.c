@@ -9,17 +9,21 @@ using namespace std;
 
 mutex mtx;
 
-#define debug(...) do{mtx.lock(); printf(__VA_ARGS__); mtx.unlock();}while(0)
+#if 0
+#define debug(...) printf(__VA_ARGS__)
+#else
+#define debug(...)
+#endif
 
 void create_parse(const char *com, int baud, const char *filename)
 {
 	CBtIO btio;
 	int res = btio.start(com, baud);
 	if(res != SERIAL_SUCCESS){
-		printf("Open uart \"%s\" failed: %d\n", com, res);
+		debug("Open uart \"%s\" failed: %d\n", com, res);
 		return;
 	}
-	CScriptParse scParse((char*)filename, &mtx);
+	CScriptParse scParse((char*)filename, com, &mtx);
 
 #define RECV_MAX_LEN 1024
 	uint8_t *received = NULL, recv_buf[RECV_MAX_LEN];
@@ -27,32 +31,34 @@ void create_parse(const char *com, int baud, const char *filename)
 	vector<vector<uint8_t>> send_data;
 	while(1){
 		send_data = scParse.get_send_data(received, recv_len);
+		if(scParse.isFinished()){ break; }
 		FOR(i, send_data.size()){
 			btio.send(send_data[i]);
 			mtx.lock();
-			printf(com);
-			printf("-<<: "); FOR(j, send_data[i].size()){ printf("%02X ", send_data[i][j]); } printf("\n");
+			debug(com);
+			debug("-<<: "); FOR(j, send_data[i].size()){ debug("%02X ", send_data[i][j]); } debug("\n");
 			mtx.unlock();
 		}
 		recv_len = btio.recv(recv_buf, RECV_MAX_LEN, scParse.get_timeout());
-		if(recv_len < 0){ puts("Timeout !"); return; }
+		if(recv_len < 0){ puts("Timeout !"); break; }
 		mtx.lock();
-		printf(com);
-		printf("->>: "); FOR(j, recv_len){printf("%02X ", recv_buf[j]); } printf("\n");
+		debug(com);
+		debug("->>: "); FOR(j, recv_len){debug("%02X ", recv_buf[j]); } debug("\n");
 		mtx.unlock();
 		received = recv_buf;
 	}
+	btio.stop();
 }
 
 int main(int argc, char *argv[])
 {
 	if(argc < 2){
 		vector<int>ports = CSerial::scan_port();
-		printf("Usage: command COM_NUM baudrate[ ");
+		debug("Usage: command COM_NUM baudrate[ ");
 		for(int i=0;i<ports.size();i++){
-			printf("COM%d ", ports[i]);
+			debug("COM%d ", ports[i]);
 		}
-		printf("] filename ...\n");
+		debug("] filename ...\n");
 		exit(0);
 	}
 	vector<thread> threads;
