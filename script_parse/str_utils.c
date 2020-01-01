@@ -17,7 +17,8 @@ static sc_var_t sc_com[] = {
 	{ SC_CMD_DEBUG,   "DEBUG"   },
 	{ SC_CMD_EXIT,    "EXIT"    },
 	{ SC_CMD_REMARK,  "#"  },
-	{ SC_CMD_DELAY,   "DELAY"  },
+	{ SC_CMD_DELAY,   "DELAY"   },
+	{ SC_CMD_IGNORE,  "IGNORE"  },
 };
 
 static sc_var_t sc_def[] = {
@@ -230,6 +231,7 @@ cmd_line_t* parse_line(char *str)
 				assert(0); // define type error.
 			}
 			}break;
+		case SC_CMD_IGNORE:
 		case SC_CMD_SEND:
 		case SC_CMD_RECV:{
 			char data_found = true;
@@ -375,6 +377,7 @@ void free_line(cmd_line_t* p)
 			if(p->define.str_data) free(p->define.str_data);
 			if(p->define.data) free(p->define.data);
 			}break;
+		case SC_CMD_IGNORE:
 		case SC_CMD_SEND:
 		case SC_CMD_RECV:
 		case SC_CMD_DEBUG:
@@ -428,6 +431,8 @@ void dump_line(cmd_line_t* p)
 			}
 			printf("\n");
 			}break;
+		case SC_CMD_IGNORE:
+			if(p->type == SC_CMD_SEND) printf("|IGNORE|");
 		case SC_CMD_SEND:
 			if(p->type == SC_CMD_SEND) printf("|SEND|");
 		case SC_CMD_RECV:{

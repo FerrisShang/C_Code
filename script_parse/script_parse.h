@@ -94,7 +94,8 @@ class CScriptParse {
 	vector<vector<uint8_t>> get_send_data(uint8_t *received, int recv_len, vector<vector<uint8_t>> data={}){
 		//vector<vector<uint8_t>> data;
 		if(current_pos == cmd_lines.size()){ return script_end(); }
-		while(cmd_lines[current_pos]->type != SC_CMD_RECV || mode == SC_MODE_CALLBACK){
+		while((cmd_lines[current_pos]->type != SC_CMD_IGNORE &&
+				cmd_lines[current_pos]->type != SC_CMD_RECV) || mode == SC_MODE_CALLBACK){
 			cmd_line_t *cmd = cmd_lines[current_pos];
 			switch(cmd->type){
 				case SC_CMD_DEFINE:{
@@ -122,6 +123,7 @@ class CScriptParse {
 						//TODO: send data in global mode
 					}
 					break;
+				case SC_CMD_IGNORE:
 				case SC_CMD_RECV:{
 					assert(mode == SC_MODE_CALLBACK);
 					//TODO: recv data in global mode
@@ -196,14 +198,19 @@ class CScriptParse {
 		//Process received data
 		if(pending_num == 0){
 			pending_flag = ~0ul;
-			for(int i = current_pos;i < cmd_lines.size() && cmd_lines[i]->type == SC_CMD_RECV;i++)
+			for(int i = current_pos;i < cmd_lines.size() && (cmd_lines[i]->type == SC_CMD_RECV ||
+						cmd_lines[i]->type == SC_CMD_IGNORE || cmd_lines[i]->type == SC_CMD_REMARK);i++){
 				pending_num = i - current_pos + 1;
+				if(cmd_lines[i]->type == SC_CMD_IGNORE || cmd_lines[i]->type == SC_CMD_REMARK){
+					pending_flag &= ~(1<<(pending_num-1));
+				}
+			}
 		}
 		if(received && recv_len){
 			char processed_flag = false;
 			FOR(cur_idx, pending_num){
 				sc_cmd_recv_t *list = &cmd_lines[current_pos+cur_idx]->recv;
-				if(!(pending_flag & (1<<cur_idx))) continue;
+				if(!(pending_flag & (1<<cur_idx)) && cmd_lines[current_pos+cur_idx]->type == SC_CMD_RECV) continue;
 				int recv_pos = 0;
 				char error = false;
 				FOR(i, list->len){
@@ -242,8 +249,14 @@ class CScriptParse {
 								memcpy(new_val.data_hex, &received[recv_pos], new_val.data_len);
 								recv_pos += new_val.data_len;
 								break;
-							}else if(val.data_len <= 0 && abs(val.data_len) < recv_len - recv_pos){
+							}else if(val.data_len < 0 && abs(val.data_len) < recv_len - recv_pos){
 								new_val.data_len = recv_len - recv_pos + val.data_len;
+								new_val.data_hex = (uint8_t*)realloc(new_val.data_hex, new_val.data_len);
+								memcpy(new_val.data_hex, &received[recv_pos], new_val.data_len);
+								recv_pos += new_val.data_len;
+								break;
+							}else if(val.data_len == 0){
+								new_val.data_len = recv_len - recv_pos;
 								new_val.data_hex = (uint8_t*)realloc(new_val.data_hex, new_val.data_len);
 								memcpy(new_val.data_hex, &received[recv_pos], new_val.data_len);
 								recv_pos += new_val.data_len;

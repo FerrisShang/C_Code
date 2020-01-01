@@ -29,6 +29,7 @@ enum{
 	SC_CMD_EXIT,
 	SC_CMD_REMARK,
 	SC_CMD_DELAY,
+	SC_CMD_IGNORE,
 };
 
 enum{
