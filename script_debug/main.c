@@ -9,11 +9,7 @@ using namespace std;
 
 mutex mtx;
 
-#if 0
 #define debug(...) printf(__VA_ARGS__)
-#else
-#define debug(...)
-#endif
 
 void create_parse(const char *com, int baud, const char *filename)
 {
@@ -34,17 +30,20 @@ void create_parse(const char *com, int baud, const char *filename)
 		if(scParse.isFinished()){ break; }
 		FOR(i, send_data.size()){
 			btio.send(send_data[i]);
+			if(!scParse.getDebug())continue;
 			mtx.lock();
 			debug(com);
 			debug("-<<: "); FOR(j, send_data[i].size()){ debug("%02X ", send_data[i][j]); } debug("\n");
 			mtx.unlock();
 		}
 		recv_len = btio.recv(recv_buf, RECV_MAX_LEN, scParse.get_timeout());
-		if(recv_len < 0){ puts("Timeout !"); break; }
-		mtx.lock();
-		debug(com);
-		debug("->>: "); FOR(j, recv_len){debug("%02X ", recv_buf[j]); } debug("\n");
-		mtx.unlock();
+		if(recv_len < 0){ mtx.lock(); debug(com); puts(": Timeout !"); break; mtx.unlock(); }
+		if(scParse.getDebug()){
+			mtx.lock();
+			debug(com);
+			debug("->>: "); FOR(j, recv_len){debug("%02X ", recv_buf[j]); } debug("\n");
+			mtx.unlock();
+		}
 		received = recv_buf;
 	}
 	btio.stop();

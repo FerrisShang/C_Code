@@ -22,6 +22,7 @@ class CScriptParse {
 	int timeout;
 	int current_pos;
 	int mode;
+	int debug_flag;
 	string title;
 	mutex *mtx;
 	uint32_t pending_flag;
@@ -38,8 +39,9 @@ class CScriptParse {
 	CScriptParse(char *file_name, const char*title=NULL, mutex *mtx=NULL){
 		parse_file(cmd_lines, file_name);
 		current_pos = 0;
-		timeout = 300;
+		timeout = 3000;
 		mode = SC_MODE_SEQUENCE;
+		debug_flag = 1;
 		pending_num = 0;
 		pending_flag = 0;
 		if(title) this->title = string(title) + string(": ");
@@ -53,6 +55,7 @@ class CScriptParse {
 		}
 	}
 	bool isFinished(void){ return finished; }
+	int getDebug(void){ return debug_flag; }
 	void dump_lines(void){ FORBE(cmd_line, cmd_lines){ dump_line(*cmd_line); } }
 	void parse_file(vector<cmd_line_t*> &cmd_lines, char*file_name){
 		FILE *fp = fopen(file_name, "r");
@@ -82,7 +85,7 @@ class CScriptParse {
 		}
 		fclose(fp);
 	}
-	int get_timeout(void){ return timeout; }
+	int get_timeout(void){ return timeout;}
 	vector<vector<uint8_t>> script_end(void){
 		if(mtx)mtx->lock();
 		if(title.length()) SC_OUTPUT(title.c_str());
@@ -153,6 +156,9 @@ class CScriptParse {
 							break;
 						case SC_SET_TOUT:
 							timeout = cmd->set.data;
+							break;
+						case SC_SET_DEBUG:
+							debug_flag = cmd->set.data;
 							break;
 					}
 					}break;

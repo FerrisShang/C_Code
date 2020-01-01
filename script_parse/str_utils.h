@@ -5,6 +5,7 @@
 enum{
 	SC_SET_MODE,
 	SC_SET_TOUT,
+	SC_SET_DEBUG,
 };
 
 enum{

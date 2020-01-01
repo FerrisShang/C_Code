@@ -29,6 +29,7 @@ static sc_var_t sc_def[] = {
 static sc_var_t sc_set[] = {
 	{ SC_SET_MODE, "MODE"},
 	{ SC_SET_TOUT, "TIMEOUT"},
+	{ SC_SET_DEBUG,"DEBUG"},
 };
 
 static sc_var_t sc_mode[] = {
@@ -313,6 +314,15 @@ cmd_line_t* parse_line(char *str)
 				}else{
 					assert(0); // set data invalid
 				}
+			}else if(ret->set.type == SC_SET_DEBUG){
+				p = get_var_dec(str, &pos, 0, &len);
+				if(len > 0){
+					char debug[32] = {0};
+					memcpy(debug, p, len);
+					ret->set.data = atoi(debug);
+				}else{
+					assert(0); // set data invalid
+				}
 			}else{
 				assert(0); // set type error.
 			}
@@ -467,7 +477,8 @@ void dump_line(cmd_line_t* p)
 			puts("|LOOP|");
 			}break;
 		case SC_CMD_SET:{
-			printf("|SET|%s|%d|\n", p->set.type==SC_SET_MODE?"MODE":"TIMEOUT", p->set.data);
+			printf("|SET|%s|%d|\n", p->set.type==SC_SET_MODE?"MODE":p->set.type==SC_SET_TOUT?"TIMEOUT":"DEBUG",
+					p->set.data);
 			}break;
 		case SC_CMD_DEBUG:
 			if(p->type == SC_CMD_DEBUG) printf("|DEBUG|");
