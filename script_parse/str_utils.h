@@ -115,7 +115,7 @@ typedef struct {
 }sc_cmd_remark_t;
 
 typedef struct {
-	int delay_ms;
+	uint32_t delay_ms;
 }sc_cmd_delay_t;
 
 typedef struct {

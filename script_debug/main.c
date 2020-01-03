@@ -27,24 +27,45 @@ void create_parse(const char *com, int baud, const char *filename)
 	vector<vector<uint8_t>> send_data;
 	while(1){
 		send_data = scParse.get_send_data(received, recv_len);
-		if(scParse.isFinished()){ break; }
 		FOR(i, send_data.size()){
-			btio.send(send_data[i]);
-			if(!scParse.getDebug())continue;
+			if(send_data[i][0] == SC_CMD_DELAY){
+				uint32_t delay_ms = (send_data[i][1])+(send_data[i][2]<<8)+
+					(send_data[i][3]<<16)+(send_data[i][4]<<24);
+				if(scParse.getDebug()){
+					mtx.lock(); debug(com); debug(": delay %d ms\n", delay_ms); mtx.unlock();
+					sleep(delay_ms/1000.0);
+				}
+			}else if(send_data[i][0] == SC_CMD_SEND){
+				btio.send(&send_data[i][1], send_data[i].size()-1);
+				if(scParse.getDebug()){
+					mtx.lock();
+					debug(com);
+					debug("-<<: "); for(int j=1;j<send_data[i].size();j++){
+						debug("%02X ", send_data[i][j]); } debug("\n");
+					mtx.unlock();
+				}
+			}else if(send_data[i][0] == SC_CMD_RECV){
+				recv_len = btio.recv(recv_buf, RECV_MAX_LEN, scParse.get_timeout());
+				if(recv_len < 0){
+					mtx.lock(); debug(com); puts(": Timeout !"); mtx.unlock();
+					btio.stop(); return;
+				}
+				if(scParse.getDebug()){
+					mtx.lock();
+					debug(com);
+					debug("->>: "); FOR(j, recv_len){debug("%02X ", recv_buf[j]); } debug("\n");
+					mtx.unlock();
+				}
+				received = recv_buf;
+			}
+		}
+		if(scParse.isFinished()){
 			mtx.lock();
 			debug(com);
-			debug("-<<: "); FOR(j, send_data[i].size()){ debug("%02X ", send_data[i][j]); } debug("\n");
+			debug(": script end.\n");
 			mtx.unlock();
+			break;
 		}
-		recv_len = btio.recv(recv_buf, RECV_MAX_LEN, scParse.get_timeout());
-		if(recv_len < 0){ mtx.lock(); debug(com); puts(": Timeout !"); break; mtx.unlock(); }
-		if(scParse.getDebug()){
-			mtx.lock();
-			debug(com);
-			debug("->>: "); FOR(j, recv_len){debug("%02X ", recv_buf[j]); } debug("\n");
-			mtx.unlock();
-		}
-		received = recv_buf;
 	}
 	btio.stop();
 }

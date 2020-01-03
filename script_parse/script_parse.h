@@ -65,7 +65,7 @@ class CScriptParse {
 			buf[0] = '\0';
 			fgets(buf, 1024, fp);
 			cmd_line_t* p = parse_line(buf);
-			if(p->type >= 0){
+			if(p->type >= 0 && p->type != SC_CMD_REMARK){
 				if(p->type == SC_CMD_IMPORT){
 					parse_file(cmd_lines, p->import.name);
 					free_line(p);
@@ -86,17 +86,13 @@ class CScriptParse {
 		fclose(fp);
 	}
 	int get_timeout(void){ return timeout;}
-	vector<vector<uint8_t>> script_end(void){
-		if(mtx)mtx->lock();
-		if(title.length()) SC_OUTPUT(title.c_str());
-		puts("script end.");
-		if(mtx)mtx->unlock();
+	vector<vector<uint8_t>> script_end(vector<vector<uint8_t>> data){
 		finished = true;
-		return vector<vector<uint8_t>>{};
+		return data;
 	}
 	vector<vector<uint8_t>> get_send_data(uint8_t *received, int recv_len, vector<vector<uint8_t>> data={}){
 		//vector<vector<uint8_t>> data;
-		if(current_pos == cmd_lines.size()){ return script_end(); }
+		if(current_pos == cmd_lines.size()){ return script_end(data); }
 		while((cmd_lines[current_pos]->type != SC_CMD_IGNORE &&
 				cmd_lines[current_pos]->type != SC_CMD_RECV) || mode == SC_MODE_CALLBACK){
 			cmd_line_t *cmd = cmd_lines[current_pos];
@@ -111,6 +107,7 @@ class CScriptParse {
 				case SC_CMD_SEND:
 					if(mode != SC_MODE_CALLBACK){
 						vector<uint8_t> send_data;
+						send_data.push_back(SC_CMD_SEND);
 						FOR(i, cmd->send.len){
 							sc_cmd_value_t *d = &cmd->send.data_list[i];
 							assert(d->type == SC_VT_HEX || d->type == SC_VT_VAR);
@@ -187,27 +184,29 @@ class CScriptParse {
 					}
 					SC_OUTPUT("\n");
 					if(mtx)mtx->unlock();
-					if(cmd->type == SC_CMD_EXIT) return script_end();
+					if(cmd->type == SC_CMD_EXIT) return script_end(data);
 					break;
 				case SC_CMD_REMARK:
 					break;
-				case SC_CMD_DELAY:
-					if(mtx)mtx->lock();
-					if(title.length()) SC_OUTPUT(title.c_str());
-					SC_OUTPUT("delay %d ms\n", cmd->delay.delay_ms);
-					if(mtx)mtx->unlock();
-					sleep(cmd->delay.delay_ms/1000.0);
-					break;
+				case SC_CMD_DELAY:{
+					vector<uint8_t> send_data;
+					send_data.push_back(SC_CMD_DELAY);
+					send_data.push_back((cmd->delay.delay_ms >> 0) & 0xFF);
+					send_data.push_back((cmd->delay.delay_ms >> 8) & 0xFF);
+					send_data.push_back((cmd->delay.delay_ms >>16) & 0xFF);
+					send_data.push_back((cmd->delay.delay_ms >>24) & 0xFF);
+					data.push_back(send_data);
+					}break;
 			}
-			if(++current_pos == cmd_lines.size()){ return script_end(); }
+			if(++current_pos == cmd_lines.size()){ return script_end(data); }
 		}
 		//Process received data
 		if(pending_num == 0){
 			pending_flag = ~0ul;
 			for(int i = current_pos;i < cmd_lines.size() && (cmd_lines[i]->type == SC_CMD_RECV ||
-						cmd_lines[i]->type == SC_CMD_IGNORE || cmd_lines[i]->type == SC_CMD_REMARK);i++){
+						cmd_lines[i]->type == SC_CMD_IGNORE);i++){
 				pending_num = i - current_pos + 1;
-				if(cmd_lines[i]->type == SC_CMD_IGNORE || cmd_lines[i]->type == SC_CMD_REMARK){
+				if(cmd_lines[i]->type == SC_CMD_IGNORE){
 					pending_flag &= ~(1<<(pending_num-1));
 				}
 			}
@@ -280,7 +279,6 @@ class CScriptParse {
 						current_pos += pending_num;
 						pending_num = 0;
 						return get_send_data(NULL, 0, data);
-						break;
 					}
 					break;
 				}
@@ -294,10 +292,16 @@ class CScriptParse {
 				}
 				SC_OUTPUT("\n");
 				if(mtx)mtx->unlock();
-				return script_end();
+				return script_end(vector<vector<uint8_t>>{});
 				// TODO: Global callback check
 			}
 		}
+		if(((~(~0 << pending_num)) & pending_flag) != 0){
+			vector<uint8_t> send_data;
+			send_data.push_back(SC_CMD_RECV);
+			data.push_back(send_data);
+		}
+
 		return data;
 	}
 };
