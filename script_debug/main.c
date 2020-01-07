@@ -57,6 +57,11 @@ void create_parse(const char *com, int baud, const char *filename)
 					mtx.unlock();
 				}
 				received = recv_buf;
+			}else if(send_data[i][0] == SC_CMD_DEBUG){
+				mtx.lock();
+				debug(com);
+				debug(": %s\n", &send_data[i][1]);
+				mtx.unlock();
 			}
 		}
 		if(scParse.isFinished()){

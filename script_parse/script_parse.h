@@ -159,7 +159,33 @@ class CScriptParse {
 							break;
 					}
 					}break;
-				case SC_CMD_DEBUG:
+				case SC_CMD_DEBUG:{
+					vector<uint8_t> debug_data;
+					debug_data.push_back(SC_CMD_DEBUG);
+					char buf[4096];
+					strcpy(buf, "*** ");
+					FOR(i, cmd->debug.len){
+						sc_cmd_value_t *data = &cmd->debug.data_list[i];
+						if(data->type == SC_VT_VAR){
+							sprintf(buf, "%s%s( ", buf, data->name);
+							if(variable_pool.count(data->name)){
+								sc_cmd_value_t *hex_data = &variable_pool[data->name];
+								assert(hex_data->type == SC_VT_HEX);
+								FOR(j, hex_data->data_len){
+									sprintf(buf, "%s%02X ", buf, hex_data->data_hex[j]);
+								}
+							}else{
+								strcat(buf, "Undefined");
+							}
+							strcat(buf, ") ");
+						}else{ /* SC_VT_DEF */
+							sprintf(buf, "%s%s ", buf, data->name);
+						}
+					}
+					debug_data.resize(1 + strlen(buf) + 1);
+					strcpy((char*)&debug_data[1], buf);
+					data.push_back(debug_data);
+					}break;
 				case SC_CMD_EXIT:
 					if(mtx)mtx->lock();
 					if(title.length()) SC_OUTPUT(title.c_str());
