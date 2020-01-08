@@ -12,6 +12,8 @@
 #include <map>
 #include <stack>
 #include <mutex>
+#include <assert.h>
+#include "file_list.h"
 #define FOR(_I_, _N_) for(int _I_=0;_I_<_N_;_I_++)
 #define FORBE(_I_, _T_) for(auto _I_=_T_.begin();_I_!=_T_.end();_I_++)
 using namespace std;
@@ -34,6 +36,7 @@ class CScriptParse {
 		int cur_value;
 	};
 	stack<struct for_stack> for_stack;
+	CFileList files;
 	bool finished;
 	public:
 	CScriptParse(char *file_name, const char*title=NULL, mutex *mtx=NULL){
@@ -47,6 +50,7 @@ class CScriptParse {
 		if(title) this->title = string(title) + string(": ");
 		this->mtx = mtx;
 		finished = false;
+		files = CFileList();
 	}
 	~CScriptParse(){
 		FORBE(cmd_line, cmd_lines){
@@ -58,8 +62,12 @@ class CScriptParse {
 	int getDebug(void){ return debug_flag; }
 	void dump_lines(void){ FORBE(cmd_line, cmd_lines){ dump_line(*cmd_line); } }
 	void parse_file(vector<cmd_line_t*> &cmd_lines, char*file_name){
-		FILE *fp = fopen(file_name, "r");
-		if(fp == NULL) return;
+		FILE *fp = fopen(files.get(file_name).c_str(), "r");
+		if(fp == NULL){
+			printf("File \"%s\" NOT found!\n", file_name);
+			assert(0);
+			return;
+		}
 		char buf[1024];
 		while (!feof(fp)) {
 			buf[0] = '\0';
@@ -75,6 +83,7 @@ class CScriptParse {
 						if(mtx)mtx->lock();
 						if(title.length()) SC_OUTPUT(title.c_str());
 						puts("Maximum lines exceeded !");
+						assert(0);
 						if(mtx)mtx->unlock();
 						return;
 					}
