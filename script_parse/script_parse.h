@@ -113,6 +113,11 @@ class CScriptParse {
 						variable_pool[cmd->define.name] = value;
 					}
 					}break;
+				case SC_CMD_ASSIGN:{
+					sc_cmd_value_t value = *(sc_cmd_value_t*)&cmd->define;
+					value.type = SC_VT_HEX;
+					variable_pool[cmd->define.name] = value;
+					}break;
 				case SC_CMD_SEND:
 					if(mode != SC_MODE_CALLBACK){
 						vector<uint8_t> send_data;
@@ -123,6 +128,10 @@ class CScriptParse {
 							if(d->type == SC_VT_HEX){
 								FOR(j, d->data_len){ send_data.push_back(d->data_hex[j]); }
 							}else{ /* SC_VT_VAR */
+								if(!variable_pool.count(d->name)){
+									printf("Variable %s @ %d not defined!\n", d->name);
+									assert(0);
+								}
 								sc_cmd_value_t *var = &variable_pool[d->name];
 								FOR(j, var->data_len){ send_data.push_back(var->data_hex[j]); }
 							}
@@ -168,11 +177,15 @@ class CScriptParse {
 							break;
 					}
 					}break;
-				case SC_CMD_DEBUG:{
+				case SC_CMD_CUSTOM:
+				case SC_CMD_DEBUG:
+				case SC_CMD_WARNING:
+				case SC_CMD_ERROR:
+				case SC_CMD_INFO:{
 					vector<uint8_t> debug_data;
-					debug_data.push_back(SC_CMD_DEBUG);
+					debug_data.push_back(cmd->type);
 					char buf[4096];
-					strcpy(buf, "*** ");
+					strcpy(buf, cmd->type != SC_CMD_CUSTOM?"* ":"");
 					FOR(i, cmd->debug.len){
 						sc_cmd_value_t *data = &cmd->debug.data_list[i];
 						if(data->type == SC_VT_VAR){

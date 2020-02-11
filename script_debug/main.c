@@ -2,6 +2,7 @@
 #include "win_serial.h"
 #include "script_parse.h"
 #include "stdio.h"
+#include "windows.h"
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -32,12 +33,12 @@ void create_parse(const char *com, int baud, const char *filename)
 				uint32_t delay_ms = (send_data[i][1])+(send_data[i][2]<<8)+
 					(send_data[i][3]<<16)+(send_data[i][4]<<24);
 				if(scParse.getDebug()){
-					mtx.lock(); debug(com); debug(": delay %d ms\n", delay_ms); mtx.unlock();
-					sleep(delay_ms/1000.0);
+					//mtx.lock(); debug(com); debug(": delay %d ms\n", delay_ms); mtx.unlock();
 				}
+				Sleep(delay_ms);
 			}else if(send_data[i][0] == SC_CMD_SEND){
 				btio.send(&send_data[i][1], send_data[i].size()-1);
-				if(scParse.getDebug()){
+				if(scParse.getDebug() <= SC_CMD_DEBUG-SC_CMD_INFO){
 					mtx.lock();
 					debug(com);
 					debug("-<<: "); for(int j=1;j<send_data[i].size();j++){
@@ -50,18 +51,22 @@ void create_parse(const char *com, int baud, const char *filename)
 					mtx.lock(); debug(com); puts(": Timeout !"); mtx.unlock();
 					btio.stop(); return;
 				}
-				if(scParse.getDebug()){
+				if(scParse.getDebug() <= SC_CMD_DEBUG-SC_CMD_INFO){
 					mtx.lock();
 					debug(com);
 					debug("->>: "); FOR(j, recv_len){debug("%02X ", recv_buf[j]); } debug("\n");
 					mtx.unlock();
 				}
 				received = recv_buf;
-			}else if(send_data[i][0] == SC_CMD_DEBUG){
-				mtx.lock();
-				debug(com);
-				debug(": %s\n", &send_data[i][1]);
-				mtx.unlock();
+			}else if((send_data[i][0] == SC_CMD_INFO && scParse.getDebug()<=SC_CMD_INFO-SC_CMD_INFO) ||
+					(send_data[i][0] == SC_CMD_DEBUG && scParse.getDebug()<=SC_CMD_DEBUG-SC_CMD_INFO) ||
+					(send_data[i][0] == SC_CMD_WARNING && scParse.getDebug()<=SC_CMD_WARNING-SC_CMD_INFO) ||
+					(send_data[i][0] == SC_CMD_ERROR && scParse.getDebug()<=SC_CMD_ERROR-SC_CMD_INFO)){
+				mtx.lock(); debug(com); debug(": %s\n", &send_data[i][1]); mtx.unlock();
+			}else if(send_data[i][0] == SC_CMD_CUSTOM){
+				if(!memcmp(&send_data[i][1], "FLUSH", min((int)(sizeof("FLUSH")-1), (int)send_data[i][0]))){
+					btio.clear();
+				}
 			}
 		}
 		if(scParse.isFinished()){

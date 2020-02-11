@@ -9,16 +9,21 @@
 static sc_var_t sc_com[] = {
 	{ SC_CMD_IMPORT,  "IMPORT" },
 	{ SC_CMD_DEFINE,  "DEFINE"  },
+	{ SC_CMD_ASSIGN,  "ASSIGN"  },
 	{ SC_CMD_SEND,    "SEND"    },
 	{ SC_CMD_RECV,    "RECV"    },
 	{ SC_CMD_FOR,     "FOR"     },
 	{ SC_CMD_LOOP,    "LOOP"    },
 	{ SC_CMD_SET,     "SET"     },
+	{ SC_CMD_INFO,    "INFO"    },
 	{ SC_CMD_DEBUG,   "DEBUG"   },
+	{ SC_CMD_WARNING, "WARNING" },
+	{ SC_CMD_ERROR,   "ERROR"   },
 	{ SC_CMD_EXIT,    "EXIT"    },
 	{ SC_CMD_REMARK,  "#"  },
 	{ SC_CMD_DELAY,   "DELAY"   },
 	{ SC_CMD_IGNORE,  "IGNORE"  },
+	{ SC_CMD_CUSTOM,  "CUSTOM"  },
 };
 
 static sc_var_t sc_def[] = {
@@ -196,6 +201,7 @@ cmd_line_t* parse_line(char *str)
 				assert(0); // import nothing
 			}
 			}break;
+		case SC_CMD_ASSIGN:
 		case SC_CMD_DEFINE:{
 			p = get_var_name(str, &pos, ',', &len);
 			if(len > 0){
@@ -327,7 +333,11 @@ cmd_line_t* parse_line(char *str)
 				assert(0); // set type error.
 			}
 			}break;
+		case SC_CMD_CUSTOM:
+		case SC_CMD_INFO:
 		case SC_CMD_DEBUG:
+		case SC_CMD_WARNING:
+		case SC_CMD_ERROR:
 		case SC_CMD_EXIT:{
 			char data_found = true;
 			sc_cmd_exit_t *data = (sc_cmd_exit_t*)&ret->exit;
@@ -382,7 +392,8 @@ void free_line(cmd_line_t* p)
 		case SC_CMD_IMPORT:{
 			if(p->import.name) free(p->import.name);
 			}break;
-		case SC_CMD_DEFINE:{
+		case SC_CMD_DEFINE:
+		case SC_CMD_ASSIGN:{
 			if(p->define.name) free(p->define.name);
 			if(p->define.str_data) free(p->define.str_data);
 			if(p->define.data) free(p->define.data);
@@ -390,7 +401,11 @@ void free_line(cmd_line_t* p)
 		case SC_CMD_IGNORE:
 		case SC_CMD_SEND:
 		case SC_CMD_RECV:
+		case SC_CMD_CUSTOM:
+		case SC_CMD_INFO:
 		case SC_CMD_DEBUG:
+		case SC_CMD_WARNING:
+		case SC_CMD_ERROR:
 		case SC_CMD_EXIT:{
 			sc_cmd_send_t *data = (sc_cmd_send_t*)&p->send;
 			for(int i=0;i<p->send.len;i++){
@@ -427,8 +442,9 @@ void dump_line(cmd_line_t* p)
 		case SC_CMD_IMPORT:{
 			printf("|IMPORT|%s|\n", p->import.name);
 			}break;
-		case SC_CMD_DEFINE:{
-			printf("|DEFINE|", p->import.name);
+		case SC_CMD_DEFINE:
+		case SC_CMD_ASSIGN:{
+			printf(p->type==SC_CMD_DEFINE?"|DEFINE|":"|ASSIGN|", p->import.name);
 			if(p->define.type == SC_DEF_RAND){
 				printf("RAND|");
 			}else if(p->define.type == SC_DEF_BYTE){
@@ -480,9 +496,17 @@ void dump_line(cmd_line_t* p)
 			printf("|SET|%s|%d|\n", p->set.type==SC_SET_MODE?"MODE":p->set.type==SC_SET_TOUT?"TIMEOUT":"DEBUG",
 					p->set.data);
 			}break;
+		case SC_CMD_CUSTOM:
+		case SC_CMD_INFO:
 		case SC_CMD_DEBUG:
-			if(p->type == SC_CMD_DEBUG) printf("|DEBUG|");
+		case SC_CMD_WARNING:
+		case SC_CMD_ERROR:
 		case SC_CMD_EXIT:{
+			if(p->type == SC_CMD_CUSTOM) printf("|CUSTOM|");
+			if(p->type == SC_CMD_INFO) printf("|INFO|");
+			if(p->type == SC_CMD_DEBUG) printf("|DEBUG|");
+			if(p->type == SC_CMD_WARNING) printf("|WARNING|");
+			if(p->type == SC_CMD_ERROR) printf("|ERROR|");
 			if(p->type == SC_CMD_EXIT) printf("|EXIT|");
 			for(int i=0;i<p->send.len;i++){
 				sc_cmd_value_t *data = &p->send.data_list[i];

@@ -21,4 +21,6 @@ DEBUG: recv {_}
 SEND: 01
 LOOP
 EXIT:  {_} byebye
-
+ASSIGN: VAR_DEFINED1, RAND, 2
+INFO: This is a INFO.
+CMD: 666 666
