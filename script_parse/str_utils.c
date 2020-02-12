@@ -189,6 +189,8 @@ cmd_line_t* parse_line(char *str)
 {
 	int pos = 0, len; char *p;
 	cmd_line_t *ret = (cmd_line_t*)calloc(1, sizeof(cmd_line_t)); assert(ret);
+	strcpy(ret->raw, str);
+	if(ret->raw[strlen(ret->raw)-1] != '\n'){ strcat(ret->raw, "\n"); }
 	ret->type = get_cmd(str, &pos);
 	//printf("\nT(%d), %s", ret->type, str);
 	switch(ret->type){

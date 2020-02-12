@@ -352,6 +352,15 @@ class CScriptParse {
 
 		return data;
 	}
+	void dump_2_file(const string& filename){
+		FILE *fp = fopen(filename.c_str(), "w");
+		if(fp){
+			FORBE(cmd_line, cmd_lines){
+				fputs((*cmd_line)->raw, fp);
+			}
+		}
+		fclose(fp);
+	}
 };
 #endif /* __SCRIPT_PARSE_H__ */
 

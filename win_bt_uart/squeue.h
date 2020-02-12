@@ -12,7 +12,9 @@ class CSQueue {
 		// Add an element to the queue.
 		void push(T t) {
 			std::lock_guard<std::mutex> lock(m);
+			queue_m.lock();
 			q.push(t);
+			queue_m.unlock();
 			c.notify_one();
 		}
 		T pop(int tout=0) {
@@ -27,16 +29,19 @@ class CSQueue {
 					}
 				}
 			}
+			queue_m.lock();
 			T val = q.front();
 			q.pop();
+			queue_m.unlock();
 			return val;
 		}
 		inline int size(void){ return q.size(); }
-		inline T front(void){ return q.front(); }
-		inline void clear(void){ while(q.size())q.pop(); }
+		inline T front(void){ queue_m.lock(); T val = q.front(); q.pop(); queue_m.unlock(); return val; }
+		inline void clear(void){ queue_m.lock(); while(q.size())q.pop(); queue_m.unlock(); }
 	private:
 		std::queue<T> q;
 		mutable std::mutex m;
+		std::mutex queue_m;
 		std::condition_variable c;
 };
 

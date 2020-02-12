@@ -125,6 +125,7 @@ typedef struct {
 
 typedef struct {
 	int type;
+	char raw[1024];
 	union{
 		sc_cmd_import_t import;
 		sc_cmd_define_t define;

@@ -16,7 +16,8 @@ class CFileList{
 		struct dirent *ent;
 		if ((dir = opendir (path)) != NULL) {
 			while ((ent = readdir (dir)) != NULL) {
-				if(strcmp(".", ent->d_name) && strcmp("..", ent->d_name)){
+				//if(strcmp(".", ent->d_name) && strcmp("..", ent->d_name)){
+				if(ent->d_name[0] != '.'){
 					auto filePath = string(path) + string("/") + string(ent->d_name);
 					fileList.push_back(filePath);
 						if(fileMap.count(string(ent->d_name))){
