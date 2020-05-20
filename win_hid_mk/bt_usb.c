@@ -7,7 +7,7 @@
 #include "bt_usb.h"
 #include "btsnoop_rec.h"
 
-#define dump(d, l) do{int i;for(i=0;i<l;i++)printf("%02X ", (unsigned char)d[i]);printf("\n");}while(0)
+#define dump(d, l) do{int i;for(i=0;i<l;i++)printf("%02X ", (unsigned char)d[i]);printf("\n");fflush(stdout);}while(0)
 #define TRAN_TOUT (2000)
 #define LOG_IN    (1)
 #define LOG_OUT   (0)
@@ -15,8 +15,9 @@
 static int _log_flag;
 static FILE *bt_snoop;
 static void (*_recv_cb)(uint8_t *data, int len);
-static pthread_mutex_t log_lock;
+static pthread_mutex_t log_lock, thread_lock;
 static usb_dev_handle *usb_dev=NULL;
+extern void hci_cache_init(void);
 
 static void log_data(uint8_t *data, int len, int dir)
 {
@@ -32,9 +33,11 @@ static void* hci_read_th(void *p)
 	int ep = *(int*)p;
 	uint8_t buf[1024];
 	while(1){
-		int res = hci_recv(buf, 1024, ep);
+		int res = usb_hci_recv(buf, 1024, ep);
 		if(res > 0){
+			pthread_mutex_lock(&thread_lock);
 			_recv_cb(buf, res);
+			pthread_mutex_unlock(&thread_lock);
 		}else{
 			usleep(10000);
 		}
@@ -47,7 +50,18 @@ static usb_dev_handle *open_dev(void)
 	for (bus = usb_get_busses(); bus; bus = bus->next){
 		for (dev = bus->devices; dev; dev = dev->next){
 			if (dev->descriptor.idVendor == MY_VID && dev->descriptor.idProduct == MY_PID){
-				return usb_open(dev);
+				usb_dev_handle *usb_dev = usb_open(dev);
+				if (usb_set_configuration(usb_dev, MY_CONFIG) < 0){
+					//printf("error setting config #%d: %s\n", MY_CONFIG, usb_strerror());
+					usb_close(usb_dev);
+					continue;
+				}
+				if (usb_claim_interface(usb_dev, 0) < 0){
+					//printf("error claiming interface #%d:\n%s\n", MY_INTF, usb_strerror());
+					usb_close(usb_dev);
+					continue;
+				}
+				return usb_dev;
 			}
 		}
 	}
@@ -61,28 +75,19 @@ static usb_dev_handle *get_usb_dev(void)
 	usb_find_busses(); /* find all busses */
 	usb_find_devices(); /* find all connected devices */
 	if (!(usb_dev = open_dev())){
-		//printf("error opening device: \n%s\n", usb_strerror());
-		return NULL;
-	}
-	if (usb_set_configuration(usb_dev, MY_CONFIG) < 0){
-		//printf("error setting config #%d: %s\n", MY_CONFIG, usb_strerror());
-		usb_close(usb_dev);
-		return NULL;
-	}
-	if (usb_claim_interface(usb_dev, 0) < 0){
-		//printf("error claiming interface #%d:\n%s\n", MY_INTF, usb_strerror());
-		usb_close(usb_dev);
+		printf("error opening device: \n%s\n", usb_strerror());
 		return NULL;
 	}
 	return usb_dev;
 }
 
-usb_dev_handle *hci_init(int log_flag, void (*recv_cb)(uint8_t *data, int len))
+usb_dev_handle *usb_hci_init(int log_flag, void (*recv_cb)(uint8_t *data, int len))
 {
 	usb_dev_handle *ret = get_usb_dev();
 	_log_flag = log_flag;
 	_recv_cb = recv_cb;
 	pthread_mutex_init(&log_lock, NULL);
+	pthread_mutex_init(&thread_lock, NULL);
 	if(_log_flag & USB_LOG_BTSNOOP){
 		bt_snoop = create_btsnoop_rec(BT_SNOOP_PATH);
 	}
@@ -106,7 +111,7 @@ void *get_usb_dev_th(void *p)
 	((void(*)(void))p)();
 }
 
-void hci_reinit(void (*cb)(void))
+void usb_hci_reinit(void (*cb)(void))
 {
 	if(get_usb_dev_flag) return;
 	get_usb_dev_flag = 1;
@@ -116,7 +121,7 @@ void hci_reinit(void (*cb)(void))
 	pthread_create(&th, 0, get_usb_dev_th, cb);
 }
 
-int hci_send(uint8_t *data, int len)
+int usb_hci_send(uint8_t *data, int len)
 {
 	int ret;
 	assert(len >= 1 && (data[0] == 0x01 || data[0] == 0x02));
@@ -130,9 +135,9 @@ int hci_send(uint8_t *data, int len)
 	return ret;
 }
 
-int hci_recv(uint8_t *data, int len, int endpoint)
+int usb_hci_recv(uint8_t *data, int len, int endpoint)
 {
-	assert(len > 0 && (endpoint == USB_EP_EVT_IN || endpoint == USB_EP_ACL_IN));
+	assert(len > 0 && (endpoint == USB_EP_EVT_IN || endpoint == USB_EP_ACL_IN || endpoint == (USB_ENDPOINT_IN | 0x03)));
 	if(!usb_dev) return -1;
 	int ret = usb_bulk_read(get_usb_dev(), endpoint, (char*)(data+1), len-1, TRAN_TOUT);
 	if(ret > 0){

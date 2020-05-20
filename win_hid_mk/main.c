@@ -125,8 +125,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	HOOKPROC m_hook_proc = (HOOKPROC)GetProcAddress(hinstDLL, "MouseHook");
 	m_hook = SetWindowsHookEx(WH_MOUSE_LL, m_hook_proc, hinstDLL, 0);
 
-	hci_init(0, bt_recv_cb);
-	//hci_init(USB_LOG_BTSNOOP, bt_recv_cb);
+	usb_hci_init(0, bt_recv_cb);
+	//usb_hci_init(USB_LOG_BTSNOOP, bt_recv_cb);
 	send_reset();
 	while(GetMessage(&msg, NULL, 0, 0) > 0) {
 		TranslateMessage(&msg);

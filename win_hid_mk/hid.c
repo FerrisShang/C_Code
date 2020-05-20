@@ -196,8 +196,8 @@ static uint8_t RSP_GATT_OTHERS_ERR_RSP[] = {0x02,XXXX,XXXX,0x09,0x00,0x05,0x00,0
 void send_hid(uint8_t *buf, uint8_t len)
 {
 	int res;
-	if(buf) res = hci_send(buf, len);
-	if(res < 0){ hci_reinit(send_reset); }
+	if(buf) res = usb_hci_send(buf, len);
+	if(res < 0){ usb_hci_reinit(send_reset); }
 	return;
 	if(buf){
 		if(_fr == (uint8_t)(_ra+1)) return;
@@ -206,7 +206,7 @@ void send_hid(uint8_t *buf, uint8_t len)
 		_ra++;
 	}
 	if(acl_count > 0 && _fr != _ra){
-		hci_send(&send_buf[_fr][4], send_buf[_fr][0]);
+		usb_hci_send(&send_buf[_fr][4], send_buf[_fr][0]);
 		_fr = (uint8_t)(_fr+1); acl_count--;
 		send_hid(NULL, 0);
 	}
@@ -468,7 +468,7 @@ void SET_HANDLE(uint8_t *data, int offset){ *(uint16_t*)&data[offset] = conn_han
 #if 0
 int main(int argc, char *argv[])
 {
-	usb_dev_handle *h = hci_init(USB_LOG_OUTPUT, bt_recv_cb);
+	usb_dev_handle *h = usb_hci_init(USB_LOG_OUTPUT, bt_recv_cb);
 	SEND(CMD_RESET);
 	while(1){ Sleep(2000); }
 }
