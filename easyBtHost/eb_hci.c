@@ -68,6 +68,10 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                 case 0x0F:{ // Command Status
                     
                     break;}
+                case 0x13:{ // Number Of Completed Packets event
+                            assert(data[3]);
+                            l2cap_packet_dec(data[6]);
+                    break;}
                 case 0x3E:{ // LE Meta Event
                     assert(len == 3+data[2]);
                     uint8_t len = data[2];

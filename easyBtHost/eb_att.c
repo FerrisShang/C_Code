@@ -93,7 +93,7 @@ static void eb_att_read_by_type_request_char_handler(uint16_t conn_hd, uint16_t 
         }
     }
     if(offset == 2){ // No service found
-        eb_att_error_response(conn_hd, sh, 0x10, 0x0A); // ATT not found
+        eb_att_error_response(conn_hd, sh, 0x08, 0x0A); // ATT not found
     }else{
         cmd[3] = offset + 4;
         cmd[5] = offset;
@@ -101,6 +101,31 @@ static void eb_att_read_by_type_request_char_handler(uint16_t conn_hd, uint16_t 
         eb_h4_send(cmd, cmd[3]+5);
     }
     
+}
+static void eb_att_find_by_type_value_request_handler(uint16_t conn_hd, uint16_t sh, uint16_t eh,
+        uint16_t type, uint8_t *uuid, uint8_t isUuid128)
+{
+    if(type != 0x2800){ // TODO: Only support service find now
+        eb_att_error_response(conn_hd, sh, 0x06, 0x06);
+        return;
+    }
+    uint16_t st_hdl=0xFFFF, en_hdl;
+    for(en_hdl=sh-1;en_hdl<eb_att_db_len && en_hdl<eh;en_hdl++){
+        int i = en_hdl;
+        if(eb_att_db[i].is_service){
+            if(st_hdl!=0xFFFF){ break; }
+            if(!memcmp(eb_att_db[i].value, uuid, isUuid128?16:2)){
+                st_hdl = i+1;
+            }
+        }
+    }
+    if(st_hdl != 0xFFFF){
+        uint8_t cmd[9+5] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x09, 0x00, 0x05, 0x00, 0x04, 0x00, 0x07,
+                                st_hdl&0xFF, st_hdl>>8, en_hdl&0xFF, en_hdl>>8};
+        eb_h4_send(cmd, cmd[3]+5);
+    }else{
+        eb_att_error_response(conn_hd, sh, 0x06, 0x0A); // ATT not found
+    }
 }
 static void eb_att_read_by_type_request_value_handler(uint16_t conn_hd, uint16_t sh, uint16_t eh, uint8_t *uuid, uint8_t isUuid128)
 {
@@ -171,6 +196,12 @@ void eb_att_handler(uint8_t *data, uint16_t len)
             uint16_t sh = data[10] + (data[11]<<8);
             uint16_t eh = data[12] + (data[13]<<8);
             eb_att_find_info_request_handler(conn_hd, sh, eh);
+            break;}
+        case 0x06:{ // Find By Type Value request
+            uint16_t att_type = data[14] + (data[15]<<8);
+            uint16_t sh = data[10] + (data[11]<<8);
+            uint16_t eh = data[12] + (data[13]<<8);
+            eb_att_find_by_type_value_request_handler(conn_hd, sh, eh, att_type, &data[16], len>18?1:0);
             break;}
         case 0x08:{ // Read by type request
             uint16_t uuid = data[14] + (data[15]<<8);

@@ -24,6 +24,7 @@ void eb_gap_connected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type
     gap_env.peer_addr_type = addr_type;
     gap_env.conn_handle = con_hdl;
     gap_env.encrypted = false;
+    eb_l2cap_init();
 }
 
 void eb_gap_disconnected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type)
@@ -82,13 +83,13 @@ void eb_gap_adv_set_param(uint16_t intv_min, uint16_t intv_max, eb_adv_type_t ad
     uint8_t cmd[4+15] = {0x01, 0x06, 0x20, 0x0F,
             intv_min&0xFF, intv_min>>8, intv_max&0xFF, intv_max>>8, adv_type, own_addr_type,
             peer_addr_type, 0,0,0,0,0,0, eb_adv_chn_map, filter_policy};
-    if(peer_addr){ memcpy(&cmd[10], peer_addr, sizeof(bdaddr_t)); }
+    if(peer_addr){ memcpy(&cmd[11], peer_addr, sizeof(bdaddr_t)); }
     eb_h4_send(cmd, sizeof(cmd));
 }
 
 void eb_gap_adv_enable(bool enable)
 {
-    uint8_t cmd[4+1] = {0x01, 0x0A, 0x20, 01, enable};
+    uint8_t cmd[4+1] = {0x01, 0x0A, 0x20, 0x1, enable};
     eb_h4_send(cmd, sizeof(cmd));
 }
 
@@ -110,7 +111,11 @@ void eb_gap_connect_cancel(void)
     eb_h4_send(cmd, sizeof(cmd));
 }
 
-
+void eb_gap_disconnect(uint16_t con_hdl, uint8_t reason)
+{
+    uint8_t cmd[] = { 0x01, 0x06, 0x04, 0x03, con_hdl&0xFF, con_hdl>>8, reason};
+    eb_h4_send(cmd, sizeof(cmd));
+}
 
 void eb_gap_reset(void)
 {

@@ -126,6 +126,7 @@ void eb_gap_set_scan_param(uint8_t scan_type, uint16_t interval, uint16_t window
 void eb_gap_scan_enable(bool enable, uint8_t filter_dup);
 void eb_gap_connect(bdaddr_t addr, uint8_t addr_type);
 void eb_gap_connect_cancel(void);
+void eb_gap_disconnect(uint16_t con_hdl, uint8_t reason);
 bool eb_gap_get_encrypted(uint16_t con_hdl);
 
 

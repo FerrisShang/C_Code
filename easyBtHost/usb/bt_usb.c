@@ -38,7 +38,7 @@ static void* hci_read_th(void *p)
 			_recv_cb(buf, res);
 	        pthread_mutex_unlock(&callback_lock);
 		}else{
-			usleep(10000);
+			usleep(1000);
 		}
 	}
 }
