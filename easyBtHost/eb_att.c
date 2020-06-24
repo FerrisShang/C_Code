@@ -217,7 +217,7 @@ void eb_att_handler(uint8_t *data, uint16_t len)
             uint16_t uuid = data[14] + (data[15]<<8);
             uint16_t sh = data[10] + (data[11]<<8);
             uint16_t eh = data[12] + (data[13]<<8);
-            if(uuid = 0x2800){ // Primary service
+            if(uuid == 0x2800){ // Primary service
                 eb_att_read_by_group_request_handler(conn_hd, sh, eh);
             }else{
                 eb_att_error_response(conn_hd, sh, opcode, 0x0A); // ATT not found

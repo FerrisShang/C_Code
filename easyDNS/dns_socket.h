@@ -5,11 +5,12 @@
 #include <assert.h>
 #if __linux__ 
 #include <sys/socket.h>
+#include <netinet/in.h>
 #else
 #include <windows.h>
 #endif
 
-#define DNS_SERVER_PORT 53
+#define DNS_SERVER_PORT 5353
 typedef struct{
 	int fd;
     struct sockaddr_in address;

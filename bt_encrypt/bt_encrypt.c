@@ -227,7 +227,7 @@ void btc_ll_enc_ctx(uint8_t *SKDm, uint8_t *SKDs, uint8_t *LTK,
 	memcpy(ctx->IV, IVm, 4); memcpy(&ctx->IV[4], IVs, 4);
 	for(int i=0;i<16;i++){ ltk[16-i-1] = LTK[i]; }
 	for(int i=0;i<8;i++){ ctx->SK[16-i-1] = SKDm[i]; ctx->SK[8-i-1] = SKDs[i]; }
-	btc_e(ltk, ctx->SK);
+	btc_e((uint8_t*)ltk, ctx->SK);
 	ccm_init_and_key(ctx->SK, 16, &ctx->ctx);
 	memcpy(ctx->nonce + 5, ctx->IV, 8);
 }

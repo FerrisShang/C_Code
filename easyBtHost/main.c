@@ -20,10 +20,10 @@ void ble_event_cb(eb_event_t *param)
     eb_set_timer(1, 10000, timeout, NULL);
     switch(param->evt_id){
         case EB_EVT_GAP_RESET:{
-#if APP_MASTER == 1
-            eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, "\x02\x01\x06\x03\x03\x12\x18\x03\x19\xC2\x03", 11);
+#if APP_MASTER == 0
+            eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, (uint8_t*)"\x02\x01\x06\x03\x03\x12\x18\x03\x19\xC2\x03", 11);
             usleep(5000);
-            eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, "\x02\x09\x5F", 3);
+            eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, (uint8_t*)"\x02\x09\x5F", 3);
             usleep(5000);
             eb_gap_adv_set_param(0x30, 0x40, EB_GAP_ADV_IND, EB_ADV_ADDR_TYPE_RANDOM, 0, NULL, 0x07, EB_ADV_FILTER_DEFAULT);
             usleep(5000);
@@ -34,10 +34,10 @@ void ble_event_cb(eb_event_t *param)
 #else
             conn_flag = false;
             bdaddr_t bdaddr = {(rand()&0x7F)|0x40, rand()%0xFF, rand()%0xFF, rand()%0xFF, rand()%0xFF, rand()%0xFF};
-            //eb_gap_set_random_address(bdaddr);
-            //usleep(5000);
-            //eb_gap_set_scan_param(0, 0x10, 0x10, 1, 0);
-            //eb_gap_scan_enable(true, 1);
+            eb_gap_set_random_address(bdaddr);
+            usleep(5000);
+            eb_gap_set_scan_param(0, 0x10, 0x10, 1, 0);
+            eb_gap_scan_enable(true, 1);
 #endif
             break;}
         case EB_EVT_GAP_CONNECTED:{
@@ -65,11 +65,11 @@ void ble_event_cb(eb_event_t *param)
             break;
         case EB_EVT_GATTS_WRITE_REQ:
             eb_gatts_send_notify(param->gatts.write.conn_hdl, param->gatts.write.att_hdl,
-                                "1111111111", 10);
+                                (uint8_t*)"1111111111", 10);
             break;
         case EB_EVT_GATTS_WRITE_CMD_REQ:
             eb_gatts_send_indicate(param->gatts.write.conn_hdl, param->gatts.write.att_hdl,
-                                "6666666666", 10);
+                                (uint8_t*)"6666666666", 10);
         case EB_EVT_GAP_ADV_REPORT:
             if(!conn_flag && param->gap.adv_report.type == EB_GAP_REPORT_IND
                 /* && param->gap.adv_report.rssi < -80*/){
@@ -116,6 +116,5 @@ int main(void)
 {
     eb_init(ble_event_cb);
     eb_att_set_service(att_db, sizeof(att_db)/sizeof(att_db[0]));
-    eb_gap_reset();
     while(1){ eb_schedule(); }
 }

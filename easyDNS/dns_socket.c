@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "dns_socket.h"
 
 dns_socket_t* dns_socket_init(void)
@@ -27,7 +28,7 @@ int dns_socket_recv(dns_socket_t *ds, uint8_t *buf,
 		uint32_t len, struct sockaddr_in *addr)
 {
     int addrLen = sizeof (struct sockaddr_in);
-    return recvfrom(ds->fd, buf, len, 0, (struct sockaddr*)addr, &addrLen);
+    return recvfrom(ds->fd, buf, len, 0, (struct sockaddr*)addr, (socklen_t*)&addrLen);
 }
 
 

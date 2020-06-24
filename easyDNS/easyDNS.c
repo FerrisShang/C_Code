@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "easyDNS.h"
 #include "dns_socket.h"
 easyDNS_t* easyDNS_init(dns_cb_t cb)
@@ -7,6 +8,7 @@ easyDNS_t* easyDNS_init(dns_cb_t cb)
 	assert(server->ds);
 	server->callback = cb;
 	assert(cb);
+	return server;
 }
 
 void easyDNS_run(easyDNS_t* server)
