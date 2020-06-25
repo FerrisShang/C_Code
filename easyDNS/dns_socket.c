@@ -1,17 +1,17 @@
 #include <stdlib.h>
 #include "dns_socket.h"
 
-dns_socket_t* dns_socket_init(void)
+dns_socket_t* dns_socket_init(int port)
 {
 #if !__linux__ 
-    WSADATA data;
-    assert(!WSAStartup(MAKEWORD(2,2), &data) != 0);
+    static WSADATA data;
+	if(!*(int*)&data){ assert(!WSAStartup(MAKEWORD(2,2), &data) != 0); }
 #endif
 	dns_socket_t *ds = (dns_socket_t*)malloc(sizeof(dns_socket_t));
 	ds->fd = socket(AF_INET, SOCK_DGRAM, 0);
     ds->address.sin_family = AF_INET;
     ds->address.sin_addr.s_addr = INADDR_ANY;
-    ds->address.sin_port = htons(DNS_SERVER_PORT);
+    ds->address.sin_port = htons(port);
     assert(!bind(ds->fd, (struct sockaddr *)&ds->address,
 				sizeof (struct sockaddr_in)));
 	return ds;
