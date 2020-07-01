@@ -3,8 +3,8 @@
 #include <string.h>
 #include <assert.h>
 
-#define BUF_SIZE (256)
-#define BUF_NUM  (1<<5)
+#define BUF_SIZE (1<<6)
+#define BUF_NUM  (1<<8)
 
 static uint8_t hci_buf[BUF_NUM][BUF_SIZE];
 static pthread_mutex_t lock;

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include "easyBle.h"
 
-#define APP_MASTER 1
+#define APP_MASTER 0
 
 static bool conn_flag;
 bool timeout(uint8_t id, void*p)
@@ -17,7 +17,9 @@ bool timeout(uint8_t id, void*p)
 void ble_event_cb(eb_event_t *param)
 {
     //printf("Evt_ID:0x%04X\n", param->evt_id);
+#if APP_MASTER == 1
     eb_set_timer(1, 10000, timeout, NULL);
+#endif
     switch(param->evt_id){
         case EB_EVT_GAP_RESET:{
 #if APP_MASTER == 0
