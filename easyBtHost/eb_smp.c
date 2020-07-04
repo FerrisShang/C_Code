@@ -164,7 +164,6 @@ bool eb_smp_get_ltk(void)
 void eb_smp_encrpyt_change(void)
 {
     if(smp_env.smp_state == EM_SMP_ST_LTK_RSP){
-        int i;
         smp_env.smp_state = EM_SMP_ST_ENC_RSP;
         uint8_t enc_info[9+17] = {0x02, smp_env.conn_hd&0xFF, smp_env.conn_hd>>8, 0x15, 0x00, 0x11, 0x00, 0x06, 0x00, 0x06};
         uint8_t enc_master[9+11] = {0x02, smp_env.conn_hd&0xFF, smp_env.conn_hd>>8, 0x0f, 0x00, 0x0b, 0x00, 0x06, 0x00, 0x07};

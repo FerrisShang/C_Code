@@ -56,8 +56,8 @@ static USB_DEV_T* open_dev(libusb_context *ctx)
         struct libusb_device_descriptor desc;
         int r = libusb_get_device_descriptor(dev, &desc);
         if (r < 0) { continue; }
+		printf("%04x %04x\n", desc.idVendor, desc.idProduct);
 		if(desc.idVendor == MY_VID && desc.idProduct == MY_PID){
-			printf("%04x %04x\n", desc.idVendor, desc.idProduct);
 			libusb_open(dev, &dev_handle);
 			if(dev_handle){ break; }
 		}
@@ -68,7 +68,6 @@ static USB_DEV_T* open_dev(libusb_context *ctx)
 
 USB_DEV_T *get_usb_dev(void)
 {
-	USB_DEV_T* dev = usb_dev;
 	if(usb_dev) return usb_dev;
 	libusb_context *ctx;
 	int r = libusb_init(&ctx);
@@ -90,14 +89,16 @@ out:
 
 int usb_hci_send(uint8_t *data, int len)
 {
+	int ret = -1;
 	USB_DEV_T *dev = get_usb_dev();
 	assert(len >= 1 && (data[0] == 0x01 || data[0] == 0x02));
 	if(data[0] == 0x01){ //cmd
-		return libusb_control_transfer(dev, USB_EP_CMD_OUT, 0, 0, 0, data+1, len-1, TRAN_TOUT);
+		ret = libusb_control_transfer(dev, USB_EP_CMD_OUT, 0, 0, 0, data+1, len-1, TRAN_TOUT);
 	}else if(data[0] == 0x02){ //acl
-		return libusb_bulk_transfer(dev, USB_EP_ACL_OUT, data+1, len-1, &len, TRAN_TOUT);
+		ret = libusb_bulk_transfer(dev, USB_EP_ACL_OUT, data+1, len-1, &len, TRAN_TOUT);
 	}
-	return -1;
+	if(ret >= 0) log_data(data, len, LOG_OUT);
+	return ret;
 }
 
 int usb_hci_recv(uint8_t *data, int len, int endpoint)
@@ -105,7 +106,6 @@ int usb_hci_recv(uint8_t *data, int len, int endpoint)
 	assert(len > 0 && (endpoint == USB_EP_EVT_IN || endpoint == USB_EP_ACL_IN));
 	int recv_len = -1;
 	USB_DEV_T *dev = get_usb_dev();
-	if(!dev){puts("Error! usb_recv");while(1);}
 	libusb_bulk_transfer(dev, endpoint, data+1, len-1, &recv_len, TRAN_TOUT);
 	if(recv_len > 0){
 		data[0] = endpoint == USB_EP_EVT_IN ? 0x04 : 0x02;

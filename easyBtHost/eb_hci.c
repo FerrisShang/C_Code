@@ -74,7 +74,7 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     break;}
                 case 0x3E:{ // LE Meta Event
                     assert(len == 3+data[2]);
-                    uint8_t len = data[2];
+                    //uint8_t len = data[2];
                     uint8_t sub_event = data[3];
                     switch(sub_event){
                         case 0x01:{ // LE Connection Complete event
