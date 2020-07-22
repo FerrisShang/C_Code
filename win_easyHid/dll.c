@@ -68,24 +68,35 @@ DLLIMPORT LRESULT CALLBACK MouseHook(int nCode, WPARAM wParam, LPARAM lParam)
 
 DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 {
-#define SEND_ALT_UP() \
+#define SEND_KEY_UP(key) \
 	do{ \
 		alt_down = FALSE; \
 		if(data->evt_callback){ /* Send ALT_UP here ! */ \
 			wParam = 0x101; /* PARAM_KEY_MASK | PARAM_KEY_UP */ \
 			KBDLLHOOKSTRUCT param; \
 			param.flags = 0; \
-			param.scanCode = SCANCODE_ALT; \
+			param.scanCode = key; \
 			data->evt_callback(nCode, wParam, (LPARAM)&param); \
 		} \
 	}while(0)
 
 #define SCANCODE_ALT  0x38
+#define SCANCODE_CTRL 29
+#define SCANCODE_WIN  91
+#define SCANCODE_SFT  42
 #define SCANCODE_CAP  0x3A
 #define SCANCODE_F1   0x3B
 #define SCANCODE_F2   0x3C
 #define SCANCODE_F3   0x3D
 #define SCANCODE_DEL  0x53
+
+#define SEND_KEYS_UP() \
+	do{ \
+		SEND_KEY_UP(SCANCODE_ALT); \
+		SEND_KEY_UP(SCANCODE_CTRL); \
+		SEND_KEY_UP(SCANCODE_WIN); \
+		SEND_KEY_UP(SCANCODE_SFT); \
+	}while(0)
 
 	data = get_global_buf(data);
 	PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)lParam;
@@ -104,7 +115,7 @@ DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 			GetCursorPos(&data->stop_pos);
 			data->remote_ctrl = data->remote_ctrl_cache;
 		}
-		SEND_ALT_UP();
+		SEND_KEYS_UP();
 		if(data->switch_callback){
 			data->switch_callback(data->remote_ctrl);
 		}
@@ -114,7 +125,7 @@ DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 		if(data->remote_ctrl != p->scanCode - SCANCODE_F1 + 1){
 			data->remote_ctrl = p->scanCode - SCANCODE_F1 + 1;
 			GetCursorPos(&data->stop_pos);
-			SEND_ALT_UP();
+			SEND_KEYS_UP();
 			if(data->switch_callback){
 				data->switch_callback(data->remote_ctrl);
 			}

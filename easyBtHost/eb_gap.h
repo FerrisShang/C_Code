@@ -9,6 +9,7 @@ enum{
     EB_EVT_GAP_DISCONNECTED,
     EB_EVT_GAP_ENCRYPTED,
     EB_EVT_GAP_ENC_REQUEST,
+    EB_EVT_GAP_PARAM_UPDATED,
     EB_EVT_GAP_LTK_REQUEST,
     EB_EVT_GAP_ADV_REPORT,
 };
@@ -97,6 +98,14 @@ typedef struct {
 }eb_gap_adv_report_t;
 
 typedef struct {
+    uint8_t status;
+    uint16_t handle;
+    uint16_t interval;
+    uint16_t latency;
+    uint16_t timeout;
+}eb_gap_param_update_t;
+
+typedef struct {
     union{
         eb_gap_connected_t connected;
         eb_gap_disconnected_t disconnected;
@@ -104,6 +113,7 @@ typedef struct {
         eb_gap_enc_request_t enc_request;
         eb_gap_ltk_request_t ltk_request;
         eb_gap_adv_report_t adv_report;
+        eb_gap_param_update_t param_update;
     };
 } eb_gap_event_t;
 

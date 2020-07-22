@@ -103,6 +103,15 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                             evt.gap.adv_report.rssi = data[2 + data[2]];
                             eb_event(&evt);
                             break;}
+                        case 0x03:{ // LE Connection Update Complete
+                                eb_event_t evt = { EB_EVT_GAP_PARAM_UPDATED };
+                                evt.gap.param_update.status = data[4];
+                                evt.gap.param_update.handle = data[5] + (data[6]<<8);
+                                evt.gap.param_update.interval = data[7] + (data[8]<<8);
+                                evt.gap.param_update.latency = data[9] + (data[10]<<8);
+                                evt.gap.param_update.timeout = data[11] + (data[12]<<8);
+                                eb_event(&evt);
+                            break;}
                         case 0x05:{ // LE Long Term Key Request Event
                             if(!eb_smp_get_ltk()){
                                 uint8_t ltk[16] = {0};

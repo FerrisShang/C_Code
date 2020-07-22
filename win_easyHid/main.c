@@ -24,7 +24,9 @@ typedef struct{
 	uint8_t cache[SIZE][40];
 	uint8_t fr;
 	uint8_t ra;
-    pthread_mutex_t mutex;
+	pthread_mutex_t mutex;
+	uint16_t interval;
+	uint8_t is_updated;
 } hid_env_t;
 #define FR hid_env.fr
 #define RA hid_env.ra
@@ -34,6 +36,34 @@ typedef struct{
 static hid_env_t hid_env;
 static uint8_t key_map[256];
 #define HID_READY() (hid_env.ready_cnt >= 2)
+
+const uint8_t update_list[][4] = {
+	{0x06, 0x06, 3, 100},
+	{0x06, 0x06, 3, 100},
+	{0x0c, 0x0c, 3, 100},
+	{0x0c, 0x18, 3, 100},
+};
+
+bool tout_cb(uint8_t id, void*p)
+{
+	if(hid_env.is_updated < sizeof(update_list)/sizeof(update_list[0])){
+		if(hid_env.conn_hdl != 0xFFFF){
+			if(hid_env.interval <= update_list[hid_env.is_updated][0]){
+				return 0;
+			}
+			eb_l2cap_update_conn_param(hid_env.conn_hdl,
+					update_list[hid_env.is_updated][0],
+					update_list[hid_env.is_updated][1],
+					update_list[hid_env.is_updated][2],
+					update_list[hid_env.is_updated][3]
+					);
+			hid_env.is_updated++;
+			return 1;
+		}
+	}else{
+		return 0;
+	}
+}
 
 static void start_adv(void)
 {
@@ -65,16 +95,33 @@ void ble_event_cb(eb_event_t *param)
             usleep(5000);
 			CA_CLEAR();
 			hid_env.conn_hdl = param->gap.connected.handle;
-			eb_l2cap_update_conn_param(hid_env.conn_hdl, 0x0C, 0x0C, 0, 100);
 			memcpy(&hid_env.peer_addr[hid_env.device_num][0], &param->gap.connected.peer_addr[0], 6);
 			hid_env.is_public[hid_env.device_num] = !param->gap.connected.peer_addr_type;
+			hid_env.interval = param->gap.connected.interval;
+			eb_set_timer(0, 2000, tout_cb, NULL);
             break;}
         case EB_EVT_GAP_DISCONNECTED:
+			eb_del_timer(0);
             usleep(5000);
+			hid_env.is_updated = 0;
 			hid_env.conn_hdl = 0xFFFF;
+			hid_env.interval = 0xFFFF;
 			hid_env.reconnect = false;
 			hid_env.ready_cnt = 0;
 			start_adv();
+            break;
+        case EB_EVT_GAP_PARAM_UPDATED:
+			if(param->gap.param_update.status == 0){
+				hid_env.interval = param->gap.param_update.interval;
+				if(hid_env.interval > update_list[0][0]){
+					if(hid_env.is_updated == 0xFF){
+						hid_env.is_updated = 0;
+					}
+					eb_set_timer(0, 2000, tout_cb, NULL);
+				}else{
+					hid_env.is_updated = 0xFF;
+				}
+			}
             break;
         case EB_EVT_GAP_RESET:{
 			hid_env.conn_hdl = 0xFFFF;
@@ -170,19 +217,15 @@ void* hid_run(void* p)
 					break;
 				}
 			}else if(p[0] == 0xFF){
+				CA_CLEAR();
 				if(hid_env.conn_hdl != 0xFFFF){
-					if(l2cap_packet_num() == 0){
-						eb_gap_disconnect(hid_env.conn_hdl, 0x15);
-						hid_env.conn_hdl = 0xFFFF;
-					}else{
-						break;
-					}
+					eb_gap_disconnect(hid_env.conn_hdl, 0x15);
+					hid_env.conn_hdl = 0xFFFF;
 				}else{
 					eb_gap_adv_enable(false);
-					usleep(5000);
+					usleep(10000);
 					start_adv();
 				}
-				FR=(FR+1)&(SIZE-1);
 			}
 		}
 		pthread_mutex_unlock(&hid_env.mutex);
@@ -246,10 +289,9 @@ void switch_callback(int n)
 	if(n){
 		pthread_mutex_lock(&hid_env.mutex);
 		if(hid_env.device_num != n){
-			if(!CA_FULL()){
-				hid_env.cache[RA][0] = 0xFF; //eb_gap_disconnect();
-				RA=(RA+1)&(SIZE-1);
-			}
+			CA_CLEAR();
+			hid_env.cache[RA][0] = 0xFF; //eb_gap_disconnect();
+			RA=(RA+1)&(SIZE-1);
 			hid_env.device_num = n;
 		}
 		pthread_mutex_unlock(&hid_env.mutex);

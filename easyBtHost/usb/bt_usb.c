@@ -42,6 +42,7 @@ static void* hci_read_th(void *p)
 			usleep(1000);
 		}
 	}
+	return NULL;
 }
 #ifdef __linux__
 
