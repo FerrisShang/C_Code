@@ -13,6 +13,16 @@ void eb_gatts_handler(uint8_t *data, uint16_t len)
 
 }
 
+void eb_gatts_error_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
+{
+    eb_event_t evt = { EB_EVT_GATTS_ERROR_RSP };
+    evt.gattc.err.conn_hdl = conn_hd;
+    evt.gattc.err.att_handle = data[2] + (data[3]<<8);
+    evt.gattc.err.req_opcode = data[1];
+    evt.gattc.err.err_code = data[4];
+    eb_event(&evt);
+}
+
 void eb_gatts_read_response(uint16_t conn_hd, uint16_t att_hdl, uint16_t offset, uint8_t *data, uint16_t len);
 void eb_gatts_read_request_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
 {

@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <time.h>
 static void daemonize();
 static void handle_signal(int sig);
 
@@ -44,7 +45,8 @@ void daemon_run(void)
 {
 	/* Never ending loop of server */
 	while (running) {
-		fprintf(log_stream, "Debug.\n");
+		time_t t; time(&t);
+		fprintf(log_stream, "Debug.%s\n", ctime(&t));
 		fflush(log_stream);
 		/* TODO: dome something useful here */
 

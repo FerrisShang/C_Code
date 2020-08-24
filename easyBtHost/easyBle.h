@@ -17,6 +17,7 @@ typedef struct {
     union{
         eb_gap_event_t gap;
         eb_gatts_event_t gatts;
+        eb_gattc_event_t gattc;
     };
 }eb_event_t;
 

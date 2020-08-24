@@ -6,13 +6,36 @@
 
 #define APP_MASTER 0
 
+uint16_t pending_serv_st_hdl;
+uint16_t pending_serv_en_hdl;
+
+uint16_t conn_handle;
 static bool conn_flag;
 bool timeout(uint8_t id, void*p)
 {
-    eb_gap_connect_cancel();
-    usleep(50000);
-    eb_gap_reset();
-    return false;
+    static int cnt = 0;
+    if(l2cap_packet_num()<4){
+        printf("notify cnt: %d\n", ++cnt);
+        eb_gatts_send_notify(conn_handle , 5, (uint8_t*)"666666", 6);
+        //eb_gatts_send_indicate(conn_handle, 5, "77777", 5);
+    }
+    if(id){
+        return true;
+    }else{
+        eb_set_timer(1, 50, timeout, NULL);
+        return false;
+    }
+}
+void dump_uuid(uuid_t *uuid, char *surfix)
+{
+    if(uuid->is128bit){
+        int i; printf("0x"); for(i=0;i<16;i++){
+            printf("%02X ", uuid->uuid[16-i-1]);
+        }
+    }else{
+        printf("0x%02X", uuid->uuid[0]+(uuid->uuid[1]<<8));
+    }
+    printf("%s", surfix);
 }
 void ble_event_cb(eb_event_t *param)
 {
@@ -43,8 +66,10 @@ void ble_event_cb(eb_event_t *param)
 #endif
             break;}
         case EB_EVT_GAP_CONNECTED:{
-            eb_del_timer(0);
-            usleep(50000);
+            printf("Connected.\n");
+            conn_handle = param->gap.connected.handle;
+            eb_gattc_read_group(conn_handle, 0x0001, 0xffff);
+            //eb_set_timer(0, 5000, timeout, NULL);
             break;}
         case EB_EVT_GAP_DISCONNECTED:
             eb_del_timer(0);
@@ -66,8 +91,8 @@ void ble_event_cb(eb_event_t *param)
             param->gatts.read.length = 3;
             break;
         case EB_EVT_GATTS_WRITE_REQ:
-            eb_gatts_send_notify(param->gatts.write.conn_hdl, param->gatts.write.att_hdl,
-                                (uint8_t*)"1111111111", 10);
+            //eb_gatts_send_notify(param->gatts.write.conn_hdl, param->gatts.write.att_hdl,
+            //                    (uint8_t*)"1111111111", 10);
             break;
         case EB_EVT_GATTS_WRITE_CMD_REQ:
             eb_gatts_send_indicate(param->gatts.write.conn_hdl, param->gatts.write.att_hdl,
@@ -92,6 +117,70 @@ void ble_event_cb(eb_event_t *param)
                 conn_flag = true;
             }
             break;
+        case EB_EVT_GATTC_READ_GROUP_RSP:{
+            eb_gattc_service_t *p = param->gattc.read_group.serv;
+            printf("-------------------------\nS | 0x%04X ", p->att_start_hdl);
+            dump_uuid(&p->uuid, "");
+            printf("  (0x%04X-0x%04X)\n", p->att_start_hdl, p->att_end_hdl);
+            uuid_t uuid = {0, {0x03, 0x28}};
+            eb_gattc_read_by_type(conn_handle, p->att_start_hdl, p->att_end_hdl, &uuid);
+            pending_serv_st_hdl = p->att_start_hdl;
+            pending_serv_en_hdl = p->att_end_hdl;
+            break;}
+        case EB_EVT_GATTC_READ_BY_TYPE_RSP:{
+            if(pending_serv_st_hdl >= pending_serv_en_hdl){ break; }
+            eb_gattc_character_t *p = param->gattc.read_by_type.chars;
+            printf("C | 0x%04X ", p->att_char_hdl);
+            dump_uuid(&p->uuid, "");
+            printf(" 0x%02X\n", p->properties);
+            printf("C | 0x%04X \"\"\n", p->att_value_hdl);
+            if(p->att_value_hdl == pending_serv_en_hdl && pending_serv_en_hdl != 0xFFFF){
+                eb_gattc_read_group(conn_handle, pending_serv_en_hdl+1, 0xffff);
+            }else{
+                eb_gattc_find_info(conn_handle, p->att_value_hdl+1, pending_serv_en_hdl);
+            }
+            break;}
+        case EB_EVT_GATTC_FIND_INFO_RSP:{
+            if(pending_serv_st_hdl >= pending_serv_en_hdl){ break; }
+            eb_gattc_info_t *p = param->gattc.find_info.infos;
+            if(!p->uuid.is128bit){
+                uint16_t uuid = p->uuid.uuid[0]+(p->uuid.uuid[1]<<8);
+                if(0x2900<=uuid&&uuid<=0x2905){
+                    printf("D | 0x%04X ", p->handle);
+                    dump_uuid(&p->uuid, "\n");
+                    if(p->handle < pending_serv_en_hdl){
+                        if(p->handle != 0xFFFF){
+                            eb_gattc_find_info(conn_handle, p->handle+1, pending_serv_en_hdl);
+                        }
+                        break;
+                    }
+                }
+            }
+            if(p->handle < pending_serv_en_hdl){
+                uuid_t uuid = {0, {0x03, 0x28}};
+                eb_gattc_read_by_type(conn_handle, p->handle, pending_serv_en_hdl, &uuid);
+            }else{
+                eb_gattc_read_group(conn_handle, pending_serv_en_hdl, 0xffff);
+            }
+            break;}
+        case EB_EVT_GATTC_ERROR_RSP:{
+            eb_gattc_err_t *p = &param->gattc.err;
+            if(p->err_code == 0x0A && pending_serv_st_hdl < pending_serv_en_hdl){ // ATT not found
+                switch(p->req_opcode){
+                    case 0x10:{ // Read by group type request
+                        pending_serv_st_hdl = 0;
+                        pending_serv_en_hdl = 0;
+                        break;}
+                    case 0x08:{ // Find By Type request
+                        eb_gattc_read_group(conn_handle, pending_serv_en_hdl+1, 0xffff);
+                        break;}
+                    case 0x04:{ // Find Infomation request
+                        uuid_t uuid = {0, {0x03, 0x28}};
+                        eb_gattc_read_by_type(conn_handle, p->att_handle, pending_serv_en_hdl, &uuid);
+                        break;}
+                }
+            }
+            break;}
     }
 }
 

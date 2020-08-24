@@ -96,7 +96,8 @@ int usb_hci_send(uint8_t *data, int len)
 	if(data[0] == 0x01){ //cmd
 		ret = libusb_control_transfer(dev, USB_EP_CMD_OUT, 0, 0, 0, data+1, len-1, TRAN_TOUT);
 	}else if(data[0] == 0x02){ //acl
-		ret = libusb_bulk_transfer(dev, USB_EP_ACL_OUT, data+1, len-1, &len, TRAN_TOUT);
+		int recv_len;
+		ret = libusb_bulk_transfer(dev, USB_EP_ACL_OUT, data+1, len-1, &recv_len, TRAN_TOUT);
 	}
 	if(ret >= 0) log_data(data, len, LOG_OUT);
 	return ret;
