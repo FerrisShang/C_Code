@@ -13,7 +13,7 @@
 #define LOG_IN    (1)
 #define LOG_OUT   (0)
 
-static int _log_flag;
+static int _log_flag, _exit_flag;
 static FILE *bt_snoop;
 static void (*_recv_cb)(uint8_t *data, int len);
 static pthread_mutex_t log_lock, callback_lock;
@@ -34,11 +34,12 @@ static void* hci_read_th(void *p)
 	uint8_t buf[1024];
 	while(1){
 		int res = usb_hci_recv(buf, 1024, ep);
-		if(res > 0){
+		if(res > 0 && !_exit_flag){
 	        pthread_mutex_lock(&callback_lock);
 			_recv_cb(buf, res);
 	        pthread_mutex_unlock(&callback_lock);
 		}else{
+			if(_exit_flag){ _exit_flag = false; break; }
 			usleep(1000);
 		}
 	}
@@ -57,7 +58,7 @@ static USB_DEV_T* open_dev(libusb_context *ctx)
         struct libusb_device_descriptor desc;
         int r = libusb_get_device_descriptor(dev, &desc);
         if (r < 0) { continue; }
-		printf("%04x %04x\n", desc.idVendor, desc.idProduct);
+		//printf("%04x %04x\n", desc.idVendor, desc.idProduct);
 		if(desc.idVendor == MY_VID && desc.idProduct == MY_PID){
 			libusb_open(dev, &dev_handle);
 			if(dev_handle){ break; }
@@ -80,7 +81,7 @@ USB_DEV_T *get_usb_dev(void)
 	if (r < 0){ printf("error setting config #%d: %s\n", MY_CONFIG, libusb_strerror(r)); goto out; }
 	r = libusb_claim_interface(usb_dev, 0);
 	if (r < 0) { fprintf(stderr, "usb_claim_interface error %d\n", r); goto out; }
-	printf("claimed interface\n");
+	//printf("claimed interface\n");
 	return usb_dev;
 out:
 	libusb_close(usb_dev);
@@ -204,26 +205,16 @@ USB_DEV_T* usb_hci_init(int log_flag, void (*recv_cb)(uint8_t *data, int len))
 	return ret;
 }
 
-#if 0
-static bool get_usb_dev_flag;
-void *get_usb_dev_th(void *p)
+void usb_hci_deinit()
 {
-	while(!usb_dev){
-		get_usb_dev();
-		usleep(1000000);
-	}
-	get_usb_dev_flag = 0;
-	((void(*)(void))p)();
-}
-
-void usb_hci_reinit(void (*cb)(void))
-{
-	if(get_usb_dev_flag) return;
-	get_usb_dev_flag = 1;
-	pthread_t th;
-	if(usb_dev){ usb_close(usb_dev); }
-	usb_dev = NULL;
-	pthread_create(&th, 0, get_usb_dev_th, cb);
-}
+	_exit_flag = true;
+	usleep(5000);
+#ifdef __linux__
+	libusb_reset_device(usb_dev);
+	libusb_close(usb_dev);
+#else
+	usb_reset(usb_dev);
+	usb_close(usb_dev);
 #endif
+}
 

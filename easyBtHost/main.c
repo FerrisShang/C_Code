@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 #include "easyBle.h"
 
 #define APP_MASTER 0
@@ -203,8 +204,16 @@ const eb_att_db_t att_db[] = {
     {{&ATT_DESC_CLIENT_CHAR_CFG}, (void*)&desc2_value, 0,0,  1,1,0,0,0, 0,1,},
 };
 
+static void handle_sigint(int sig)
+{
+    eb_gap_reset();
+    usleep(5000);
+    exit(0);
+}
+
 int main(void)
 {
+    signal(SIGINT, handle_sigint);
     eb_init(ble_event_cb);
     eb_att_set_service(att_db, sizeof(att_db)/sizeof(att_db[0]));
     while(1){ eb_schedule(); }

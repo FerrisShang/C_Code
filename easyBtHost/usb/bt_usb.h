@@ -33,7 +33,7 @@ typedef struct usb_dev_handle USB_DEV_T;
 
 
 USB_DEV_T *usb_hci_init(int log_flag, void (*recv_cb)(uint8_t *data, int len));
-void usb_hci_reinit(void (*cb)(void));
+void usb_hci_deinit(void);
 int usb_hci_send(uint8_t *data, int len);
 int usb_hci_recv(uint8_t *data, int len, int endpoint);
 

@@ -35,6 +35,10 @@ static void eb_att_read_by_group_request_handler(uint16_t conn_hd, uint16_t sh, 
     uint8_t cmd[9+23] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x11};
     uint8_t isUuid128=0xFF, offset = 2; // opcode & len
     uint16_t i, cur_serv;
+    if(!eb_att_db_len){ // No service
+        eb_att_error_response(conn_hd, sh, 0x10, 0x0A); // ATT not found
+        return;
+    }
     for(i=sh-1, cur_serv=HANDLE_INVALID;offset<EB_ATT_MTU_DEFAULT && i<=eb_att_db_len && i<=eh;i++){
         if(i == eh || i == eb_att_db_len  || eb_att_db[i].is_service){ // Only primary service support
             if(cur_serv != HANDLE_INVALID){

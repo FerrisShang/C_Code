@@ -22,7 +22,20 @@ void eb_l2cap_update_conn_param(uint16_t conn_hd,
 }
 void eb_l2cap_handler(uint8_t *data, uint16_t len)
 {
-}
+    uint16_t conn_hd = (data[1] + (data[2]<<8)) & 0x0FFF;
+    uint8_t opcode = data[9];
+    uint8_t id = data[10];
+    switch(opcode){
+        case 0x12:{ // Connection parameter update request
+            uint8_t cmd[9+6] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x0A, 0x00, 0x06, 0x00, 0x05, 0x00, 0x13, id, 0x02, 0x00, 0x01, 0x00};
+            eb_h4_send(cmd, sizeof(cmd));
+        }   break;
+        default:{
+            uint8_t cmd[9+6] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x0A, 0x00, 0x06, 0x00, 0x05, 0x00, 0x01, id, 0x02, 0x00, 0x00, 0x00};
+            eb_h4_send(cmd, sizeof(cmd));
+        }   break;
+    }
+ }
 
 void l2cap_packet_inc(void)
 {

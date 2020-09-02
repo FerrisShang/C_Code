@@ -98,9 +98,9 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                             evt.gap.adv_report.type = data[5];
                             evt.gap.adv_report.addr_type = data[6];
                             memcpy(evt.gap.adv_report.addr, &data[7], 6);
-                            evt.gap.adv_report.length = data[8];
-                            evt.gap.adv_report.data = &data[9];
-                            evt.gap.adv_report.rssi = data[2 + data[2]];
+                            evt.gap.adv_report.length = data[13];
+                            evt.gap.adv_report.data = &data[14];
+                            evt.gap.adv_report.rssi = data[len-1];
                             eb_event(&evt);
                             break;}
                         case 0x03:{ // LE Connection Update Complete

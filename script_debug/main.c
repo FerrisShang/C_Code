@@ -9,10 +9,18 @@
 #include <thread>
 using namespace std;
 
-mutex mtx;
+mutex mtx, var_lock;
 
 #define debug(...) printf(__VA_ARGS__)
 
+vector<CScriptParse*> scParses;
+void share_variable(CScriptParse &scParse, char *val_name)
+{
+	auto val = scParse.get_val(val_name);
+	for(CScriptParse* sp : scParses){
+		sp->update_variable(val_name, val);
+	}
+}
 void create_parse(const char *com, int baud, const char *filename)
 {
 	CBtIO btio;
@@ -21,7 +29,10 @@ void create_parse(const char *com, int baud, const char *filename)
 		debug("Open uart \"%s\" failed: %d\n", com, res);
 		return;
 	}
-	CScriptParse scParse((char*)filename, com, &mtx);
+	CScriptParse scParse((char*)filename, com, &mtx, &var_lock);
+	mtx.lock();
+	scParses.push_back(&scParse);
+	mtx.unlock();
 
 #define RECV_MAX_LEN 1024
 	uint8_t *received = NULL, recv_buf[RECV_MAX_LEN];
@@ -80,6 +91,14 @@ void create_parse(const char *com, int baud, const char *filename)
 					new_name.resize(new_name.length()-3);
 					new_name += string("_raw.sc");
 					scParse.dump_2_file(new_name);
+			}else if(send_data[i][0] == SC_CMD_CUSTOM &&
+					!memcmp(&send_data[i][1], "SHARE", min(5, (int)send_data[i][0]))){
+					char v[128]={0}, *s=(char*)&send_data[i][6];
+					int max_len = send_data[i].size() - 6;
+					while(*s == ' ' && s-(char*)&send_data[i][0]<send_data[i].size())s++;
+					strncpy(v, s, send_data[i].size()-(s-(char*)&send_data[i][0]));
+					char *e=v; while(isalnum(*e)||*e=='_')e++; *e = '\0';
+					share_variable(scParse, v);
 			}
 		}
 		if(scParse.isFinished()){
