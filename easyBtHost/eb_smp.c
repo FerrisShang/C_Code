@@ -38,6 +38,7 @@ enum{
 
 struct eb_smp_env{
     uint16_t conn_hd;
+    uint8_t role;
     uint8_t smp_state;
     uint8_t smp_encrypt_state;
 };
@@ -49,8 +50,9 @@ void eb_smp_init(void)
 {
 }
 
-void eb_smp_connected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type)
+void eb_smp_connected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type, uint8_t role)
 {
+    smp_env.role = role;
     smp_env.conn_hd = con_hdl;
 }
 
@@ -180,3 +182,12 @@ void eb_smp_encrpyt_change(void)
     }
 }
 
+void eb_smp_auth(uint16_t conn_hd)
+{
+    if(smp_env.role){
+        uint8_t cmd[9+2] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x6, 0x00, 0x2, 0x00, 0x06, 0x00, 0x0B, 0x01};
+        eb_h4_send(cmd, sizeof(cmd));
+    }else{
+        // TODO: pairing request
+    }
+}

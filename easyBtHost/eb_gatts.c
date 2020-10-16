@@ -103,6 +103,11 @@ void eb_gatts_write_request_handler(uint16_t conn_hd, uint8_t *data, uint16_t le
     eb_event(&evt);
 }
 
+void eb_gatts_write_response_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
+{
+    eb_event_t evt = { EB_EVT_GATTS_WRITE_RSP };
+    eb_event(&evt);
+}
 void eb_gatts_indicate_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
 {
     eb_event_t evt = { EB_EVT_GATTS_INDICATE_RSP };

@@ -5,6 +5,7 @@
 
 void eb_smp_init(void);
 void eb_smp_handler(uint8_t *data, uint16_t len);
+void eb_smp_auth(uint16_t conn_hd);
 
 
 #endif /* __EB_SMP_H__ */

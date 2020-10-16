@@ -69,6 +69,9 @@ typedef struct {
 
 typedef struct {
     uint16_t conn_hdl;
+    uint16_t offset;
+    uint8_t *value;
+    uint16_t len;
 }eb_gattc_read_rsp_t;
 
 typedef struct {
@@ -103,6 +106,7 @@ void eb_gattc_read_by_type_value_rsp_handler(uint16_t conn_hd, uint8_t *data, ui
 void eb_gattc_read_by_type_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gattc_find_info_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gattc_read_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
+void eb_gattc_read_blob_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gattc_write_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 
 void eb_gattc_read_group(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end);

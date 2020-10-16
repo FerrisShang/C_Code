@@ -11,6 +11,7 @@ enum{
     EB_EVT_GATTS_READ_BLOB_RSP,
     EB_EVT_GATTS_WRITE_REQ,
     EB_EVT_GATTS_WRITE_CMD_REQ,
+    EB_EVT_GATTS_WRITE_RSP,
     EB_EVT_GATTS_INDICATE_RSP,
 };
 
@@ -65,6 +66,7 @@ void eb_gatts_error_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gatts_read_request_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gatts_blob_read_request_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gatts_write_request_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
+void eb_gatts_write_response_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gatts_indicate_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gatts_send_notify(uint16_t conn_hd, uint16_t att_hd, uint8_t *data, uint16_t len);
 void eb_gatts_send_indicate(uint16_t conn_hd, uint16_t att_hd, uint8_t *data, uint16_t len);

@@ -242,12 +242,21 @@ void eb_att_handler(uint8_t *data, uint16_t len)
         case 0x0A:{ // Read Request
             eb_gatts_read_request_handler(conn_hd, &data[9], len-9);
             break;}
+        case 0x0B:{ // Read Response
+            eb_gattc_read_rsp_handler(conn_hd, &data[9], len-9);
+            break;}
         case 0x0C:{ // Read Blob Request
             eb_gatts_blob_read_request_handler(conn_hd, &data[9], len-9);
+            break;}
+        case 0x0D:{ // Read Blob Response
+            eb_gattc_read_blob_rsp_handler(conn_hd, &data[9], len-9);
             break;}
         case 0x12:
         case 0x52:{ // Write Request
             eb_gatts_write_request_handler(conn_hd, &data[9], len-9);
+            break;}
+        case 0x13:{ // Write Response
+            eb_gatts_write_response_handler(conn_hd, &data[9], len-9);
             break;}
         case 0x1D:{ // Indicataion
             eb_gatts_indicate_rsp_handler(conn_hd, &data[9], len-9);

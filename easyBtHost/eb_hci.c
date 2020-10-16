@@ -12,7 +12,7 @@ static void em_hci_encrypted_handler(uint8_t *encrypted);
 void eb_smp_encrpyt_change(void);
 void eb_gap_set_encrypted(uint16_t con_hdl, bool encrypted);
 void eb_gap_connected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type);
-void eb_smp_connected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type);
+void eb_smp_connected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type, uint8_t role);
 bool eb_smp_get_ltk(void);
 void eb_gap_disconnected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type);
 void eb_smp_disconnected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type);
@@ -89,7 +89,7 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                             evt.gap.connected.timeout = data[19] + (data[20]<<8);
                             evt.gap.connected.sca = data[21];
                             eb_gap_connected_handler(evt.gap.connected.handle, evt.gap.connected.peer_addr, data[8]);
-                            eb_smp_connected_handler(evt.gap.connected.handle, evt.gap.connected.peer_addr, data[8]);
+                            eb_smp_connected_handler(evt.gap.connected.handle, evt.gap.connected.peer_addr, data[8], data[7]);
                             eb_event(&evt);
                             break;}
                         case 0x02:{ // LE Advertising Report event
