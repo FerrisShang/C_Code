@@ -65,6 +65,7 @@ static USB_DEV_T* open_dev(libusb_context *ctx)
 		}
     }
 	libusb_free_device_list(list, 0);
+	libusb_reset_device(dev_handle);
 	return dev_handle;
 }
 
@@ -136,6 +137,7 @@ static USB_DEV_T* open_dev(void)
 					usb_close(usb_dev);
 					continue;
 				}
+				usb_reset(usb_dev);
 				return usb_dev;
 			}
 		}

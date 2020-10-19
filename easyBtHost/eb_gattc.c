@@ -124,7 +124,7 @@ void eb_gattc_read_by_type(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att
 
 void eb_gattc_find_info(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end)
 {
-    uint8_t cmd[9+5] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x0b, 0x00, 0x07, 0x00, 0x04, 0x00, 0x04,
+    uint8_t cmd[9+5] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x09, 0x00, 0x05, 0x00, 0x04, 0x00, 0x04,
         att_hd_start & 0xFF, att_hd_start >> 8, att_hd_end & 0xFF, att_hd_end >> 8};
     eb_h4_send(cmd, sizeof(cmd));
 }
@@ -132,7 +132,7 @@ void eb_gattc_find_info(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd
 void eb_gattc_read(uint16_t conn_hd, uint16_t att_hd, uint16_t offset)
 {
     if(offset){
-        uint8_t cmd[9+5] = {0x02, conn_hd&0xFF, conn_hd>>8, 7, 0x00, 3, 0x00, 0x04, 0x00, 0x0C,
+        uint8_t cmd[9+5] = {0x02, conn_hd&0xFF, conn_hd>>8, 9, 0x00, 5, 0x00, 0x04, 0x00, 0x0C,
             att_hd & 0xFF, att_hd >> 8, offset & 0xFF, offset >> 8};
         blob_read_offset = offset;
         eb_h4_send(cmd, sizeof(cmd));

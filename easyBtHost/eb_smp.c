@@ -4,6 +4,7 @@
 #include "eb_smp.h"
 #include "eb_gap.h"
 
+#define SMP_PAIRING_REQ_DATA 0x01,0x03,0x00,0x01,0x10,0x01,0x01
 #define SMP_PAIRING_RSP_DATA 0x02,0x03,0x00,0x01,0x10,0x01,0x01
 static const uint8_t tk[16] = {0};
 
@@ -72,8 +73,13 @@ static void smp_enc_cal_cb(uint8_t *encrypted)
 {
     if(smp_env.smp_encrypt_state == EM_SMP_ENC_ST_CONFIRM_CAL1){
         bdaddr_t ia ,ra; int i;
-        eb_gap_get_peer_address(ia);
-        eb_gap_get_local_address(ra);
+        if(smp_env.role){
+            eb_gap_get_peer_address(ia);
+            eb_gap_get_local_address(ra);
+        }else{
+            eb_gap_get_peer_address(ra);
+            eb_gap_get_local_address(ia);
+        }
         for(i=0;i<6;i++){
             encrypted[i+0] ^= ra[i];
             encrypted[i+6] ^= ia[i];
@@ -81,20 +87,32 @@ static void smp_enc_cal_cb(uint8_t *encrypted)
         em_hci_encrypt(encrypted, (uint8_t*)tk, smp_enc_cal_cb);
         smp_env.smp_encrypt_state = EM_SMP_ENC_ST_CONFIRM_CAL2;
     }else if(smp_env.smp_encrypt_state == EM_SMP_ENC_ST_CONFIRM_CAL2){
-        if(smp_env.smp_state == EM_SMP_ST_CONFIRM_REQ){
-            smp_send_confirm(smp_env.conn_hd, encrypted);
-            smp_env.smp_encrypt_state = EM_SMP_ENC_ST_IDLE;
-            smp_env.smp_state = EM_SMP_ST_CONFIRM_RSP;
+        if(smp_env.role){
+            if(smp_env.smp_state == EM_SMP_ST_CONFIRM_REQ){
+                smp_send_confirm(smp_env.conn_hd, encrypted);
+                smp_env.smp_encrypt_state = EM_SMP_ENC_ST_IDLE;
+                smp_env.smp_state = EM_SMP_ST_CONFIRM_RSP;
+            }else{
+                memcpy(smp_encrypt_buf, encrypted, 16);
+                smp_env.smp_encrypt_state = EM_SMP_ENC_ST_CONFIRM_PENDING;
+            }
         }else{
-            memcpy(smp_encrypt_buf, encrypted, 16);
-            smp_env.smp_encrypt_state = EM_SMP_ENC_ST_CONFIRM_PENDING;
+            smp_env.smp_encrypt_state = EM_SMP_ENC_ST_IDLE;
+            smp_env.smp_state = EM_SMP_ST_CONFIRM_REQ;
+            smp_send_confirm(smp_env.conn_hd, encrypted);
         }
     }else if(smp_env.smp_encrypt_state == EM_SMP_ENC_ST_STK){
         smp_env.smp_state = EM_SMP_ST_LTK_RSP;
         smp_env.smp_encrypt_state = EM_SMP_ENC_ST_IDLE;
-        uint8_t cmd[4+18] = {0x01, 0x1A, 0x20, 0x12, smp_env.conn_hd&0xFF, smp_env.conn_hd>>8};
-        memcpy(&cmd[6], encrypted, 16);
-        eb_h4_send(cmd, sizeof(cmd));
+        if(smp_env.role){
+            uint8_t cmd[4+18] = {0x01, 0x1A, 0x20, 0x12, smp_env.conn_hd&0xFF, smp_env.conn_hd>>8};
+            memcpy(&cmd[6], encrypted, 16);
+            eb_h4_send(cmd, sizeof(cmd));
+        }else{ // send encrypt request
+            uint8_t cmd[4+28] = {0x01, 0x19, 0x20, 28, smp_env.conn_hd&0xFF, smp_env.conn_hd>>8};
+            memcpy(&cmd[16], encrypted, 16);
+            eb_h4_send(cmd, sizeof(cmd));
+        }
     }
 }
 
@@ -102,8 +120,13 @@ static void smp_cal_confirm(void)
 {
     int i;
     bdaddr_t addr;
-    *smp_iat = eb_gap_get_peer_address(&addr[0]);
-    *smp_rat = eb_gap_get_local_address(&addr[0]);
+    if(smp_env.role){
+        *smp_iat = eb_gap_get_peer_address(&addr[0]);
+        *smp_rat = eb_gap_get_local_address(&addr[0]);
+    }else{
+        *smp_iat = eb_gap_get_local_address(&addr[0]);
+        *smp_rat = eb_gap_get_peer_address(&addr[0]);
+    }
     for(i=0;i<16;i++){ smp_encrypt_buf[i] ^= smp_local_rand_value[i]; }
     em_hci_encrypt(smp_encrypt_buf, (uint8_t*)tk, smp_enc_cal_cb);
     smp_env.smp_encrypt_state = EM_SMP_ENC_ST_CONFIRM_CAL1;
@@ -129,22 +152,47 @@ void eb_smp_handler(uint8_t *data, uint16_t len)
             memcpy(smp_pairing_rsp, &cmd[9], 7);
             smp_cal_confirm();
             break;}
+        case 0x02:{ // Pairing Response
+            smp_env.smp_state = EM_SMP_ST_PAIRING_RSP;
+            // calulate confirm value
+            int i;
+            for(i=0;i<16;i++){ smp_local_rand_value[i] = rand()&0xFF; }
+            memcpy(smp_pairing_rsp, &data[9], 7);
+            smp_cal_confirm();
+            break;}
         case 0x03:{ // Pairing Confirm
             smp_env.smp_state = EM_SMP_ST_CONFIRM_REQ;
-            if(smp_env.smp_encrypt_state == EM_SMP_ENC_ST_CONFIRM_PENDING){
-                smp_env.smp_encrypt_state = EM_SMP_ENC_ST_IDLE;
-                smp_send_confirm(conn_hd, smp_encrypt_buf);
-                smp_env.smp_state = EM_SMP_ST_CONFIRM_RSP;
+            if(smp_env.role){
+                if(smp_env.smp_encrypt_state == EM_SMP_ENC_ST_CONFIRM_PENDING){
+                    smp_env.smp_encrypt_state = EM_SMP_ENC_ST_IDLE;
+                    smp_send_confirm(conn_hd, smp_encrypt_buf);
+                    smp_env.smp_state = EM_SMP_ST_CONFIRM_RSP;
+                }
+            }else{
+                smp_env.smp_state = EM_SMP_ST_RAND_REQ;
+                uint8_t cmd[9+17] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x15, 0x00, 0x11, 0x00, 0x06, 0x00, 0x04};
+                memcpy(&cmd[10], smp_local_rand_value, 16);
+                memcpy(&smp_encrypt_buf[0], smp_local_rand_value, 8);
+                eb_h4_send(cmd, sizeof(cmd));
             }
             break;}
         case 0x04:{ // Pairing Random
-            smp_env.smp_state = EM_SMP_ST_RAND_REQ;
-            uint8_t cmd[9+17] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x15, 0x00, 0x11, 0x00, 0x06, 0x00, 0x04};
-            memcpy(&cmd[10], smp_local_rand_value, 16);
-            eb_h4_send(cmd, sizeof(cmd));
-            smp_env.smp_state = EM_SMP_ST_RAND_RSP;
-            memcpy(&smp_encrypt_buf[8], &cmd[10], 8);
-            memcpy(&smp_encrypt_buf[0], &data[10], 8);
+            if(smp_env.role){
+                smp_env.smp_state = EM_SMP_ST_RAND_REQ;
+                uint8_t cmd[9+17] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x15, 0x00, 0x11, 0x00, 0x06, 0x00, 0x04};
+                memcpy(&cmd[10], smp_local_rand_value, 16);
+                eb_h4_send(cmd, sizeof(cmd));
+                smp_env.smp_state = EM_SMP_ST_RAND_RSP;
+                memcpy(&smp_encrypt_buf[8], &cmd[10], 8);
+                memcpy(&smp_encrypt_buf[0], &data[10], 8);
+            }else{
+                memcpy(&smp_encrypt_buf[8], &data[10], 8);
+                smp_env.smp_encrypt_state = EM_SMP_ENC_ST_STK;
+                em_hci_encrypt(smp_encrypt_buf, (uint8_t*)tk, smp_enc_cal_cb);
+            }
+            break;}
+        case 0x05:{ // Pairing Failed
+            eb_gap_disconnect(conn_hd, 0x16);
             break;}
         default:
             break;
@@ -188,6 +236,11 @@ void eb_smp_auth(uint16_t conn_hd)
         uint8_t cmd[9+2] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x6, 0x00, 0x2, 0x00, 0x06, 0x00, 0x0B, 0x01};
         eb_h4_send(cmd, sizeof(cmd));
     }else{
-        // TODO: pairing request
+        smp_env.smp_state = EM_SMP_ST_PAIRING_REQ;
+        // pairing request
+        uint8_t cmd[9+7] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x0b, 0x00, 0x07, 0x00, 0x06, 0x00,
+            SMP_PAIRING_REQ_DATA};
+        memcpy(smp_pairing_req, &cmd[9], 7);
+        eb_h4_send(cmd, sizeof(cmd));
     }
 }

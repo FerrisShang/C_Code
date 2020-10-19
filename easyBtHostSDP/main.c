@@ -134,7 +134,7 @@ void dump_dev_discovered(void)
             printf("Connecting to ");
             for (int j = 5; j > 0; j--) printf("%02X:", p_dev_report[c-1]->addr[j]);
             printf("%02X ...", p_dev_report[c-1]->addr[0]);
-            //eb_set_timer(1, 5000, timeout_handler, NULL);
+            eb_set_timer(1, 5000, timeout_handler, NULL);
             usleep(5000);
             eb_gap_connect(p_dev_report[c-1]->addr, p_dev_report[c-1]->addr_type);
             fflush(stdout);
@@ -153,7 +153,6 @@ bool timeout_handler(uint8_t id, void* p)
             dump_dev_discovered();
             break;
         case 1: // conn timeout
-            eb_del_timer(1);
             eb_gap_connect_cancel();
             printf(" Timeout !\n");
             show_menu_flag = true;
@@ -161,6 +160,9 @@ bool timeout_handler(uint8_t id, void* p)
         case 2: // adv timeout
             start_adv(false);
             show_menu_flag = true;
+            break;
+        case 3: // SDK timeout
+            eb_gap_disconnect(conn_handle, 0x22);
             break;
     }
     return false;
@@ -218,12 +220,14 @@ void ble_event_cb(eb_event_t* param)
             if(param->gap.connected.status == 0){
                 printf(" Connected.\n");
                 conn_handle = param->gap.connected.handle;
+                eb_set_timer(3, 20000, timeout_handler, NULL);
             }else{
                 printf(" Connected failed: 0x%02X\n", param->gap.connected.status);
             }
             break;
         }
         case EB_EVT_GAP_DISCONNECTED:
+            eb_del_timer(3);
             printf("* Disconnected, reason: 0x%02X\n", param->gap.disconnected.reason);
             show_menu_flag = true;
             break;
