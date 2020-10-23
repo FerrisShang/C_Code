@@ -50,7 +50,7 @@ static void eb_att_read_by_group_request_handler(uint16_t conn_hd, uint16_t sh, 
                 offset += eb_att_db[cur_serv].uuid_len?20:6;
             }
             cur_serv = i;
-            if(i == eh+1 || i == eb_att_db_len+1){ break; }
+            if(i == eh || i == eb_att_db_len){ break; }
             if(isUuid128==0xFF){
                 isUuid128 = eb_att_db[i].uuid_len;
             }else{
@@ -73,8 +73,11 @@ static void eb_att_read_by_type_request_char_handler(uint16_t conn_hd, uint16_t 
     uint8_t cmd[9+23] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x09};
     uint8_t isUuid128=0xFF, offset = 2; // opcode & len
     uint16_t i;
-    for(i=sh-1;offset<EB_ATT_MTU_DEFAULT && i<eb_att_db_len && i<eh;i++){
-        if(!eb_att_db[i].uuid_len && *eb_att_db[i].uuid16 == ATT_DECL_CHARACTERISTIC){ // Only characteristic support
+    for(i=sh-1;i<eb_att_db_len && i<eh;i++){
+        if(!eb_att_db[i].uuid_len && *eb_att_db[i].uuid16 == ATT_DECL_CHARACTERISTIC){
+            if(offset + (eb_att_db[i+1].uuid_len?21:7) > EB_ATT_MTU_DEFAULT){
+                break;
+            }
             cmd[offset+9] = (i+1)&0xFF;
             cmd[offset+10] = (i+1)>>8;
             uint8_t prop = (eb_att_db[i+1].prop_read      << 1) +
@@ -117,7 +120,8 @@ static void eb_att_find_by_type_value_request_handler(uint16_t conn_hd, uint16_t
         int i = en_hdl;
         if(eb_att_db[i].is_service){
             if(st_hdl!=0xFFFF){ break; }
-            if(!memcmp(eb_att_db[i].value, uuid, isUuid128?16:2)){
+            uint8_t len = (eb_att_db[i].uuid_len & isUuid128)?16:2;
+            if(!memcmp(eb_att_db[i].value, uuid, len)){
                 st_hdl = i+1;
             }
         }
@@ -164,7 +168,10 @@ static void eb_att_find_info_request_handler(uint16_t conn_hd, uint16_t sh, uint
     uint8_t cmd[9+23] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x05};
     uint8_t isUuid128=0xFF, offset = 2; // opcode & len
     uint16_t i;
-    for(i=sh-1;offset<EB_ATT_MTU_DEFAULT && i<eb_att_db_len && i<eh;i++){
+    for(i=sh-1;i<eb_att_db_len && i<eh;i++){
+        if((eb_att_db[i].uuid_len?18:4) > EB_ATT_MTU_DEFAULT){
+            break;
+        }
         cmd[offset+9] = (i+1)&0xFF;
         cmd[offset+10] = (i+1)>>8;
         memcpy(&cmd[offset+11], eb_att_db[i].uuid16, eb_att_db[i].uuid_len?16:2);

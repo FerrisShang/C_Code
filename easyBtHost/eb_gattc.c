@@ -147,7 +147,7 @@ void eb_gattc_write(uint16_t conn_hd, uint16_t att_hd, uint8_t *data, uint16_t l
 {
     uint8_t cmd[9+21] = {0x02, conn_hd&0xFF, conn_hd>>8, len+7, 0x00, len+3, 0x00, 0x04, 0x00, 0x12,
         att_hd & 0xFF, att_hd >> 8 };
-    memcpy(&cmd[12], data, len);
+    memcpy(&cmd[12], data, len<20?len:20);
     eb_h4_send(cmd, sizeof(cmd));
 }
 

@@ -233,7 +233,7 @@ void ble_event_cb(eb_event_t* param)
             break;
         case EB_EVT_GAP_ADV_REPORT: {
             /* && param->gap.adv_report.rssi < -80*/
-            uint8_t i, idx = 0;
+            uint8_t i;
             for (i = 0; i < dev_num; i++) {
                 if (!memcmp(dev_report[i].addr, &param->gap.adv_report.addr, 6)) {
                     break;
@@ -297,7 +297,24 @@ int main(void)
 {
     signal(SIGINT, handle_sigint);
     eb_init(ble_event_cb);
-    eb_att_set_service(NULL, 0);
+
+    static const uuid16_t serv1  = {0x66, 0x33};
+    static const uuid16_t uuid1  = {0x00, 0x2A};
+    static const uuid128_t serv2 = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+    static const uuid128_t uuid2 = {0x01, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02};
+    static uint8_t desc2_value[2];
+
+    static const eb_att_db_t att_db[] = {
+        {{&ATT_DECL_PRIMARY_SERVICE}, (void*)&serv1,       1,0,  1,0,0,0,0, 0,0,},
+        {{&ATT_DECL_CHARACTERISTIC},  NULL,                0,0,  1,0,0,0,0, 0,0,},
+        {{&uuid1},                    NULL,                0,0,  1,1,1,1,1, 0,0,},
+        {{&ATT_DESC_CLIENT_CHAR_CFG}, NULL,                0,0,  1,1,0,0,0, 0,0,},
+        {{&ATT_DECL_PRIMARY_SERVICE}, (void*)&serv2,       1,1,  1,1,1,1,1, 0,0,},
+        {{&ATT_DECL_CHARACTERISTIC},  NULL,                0,0,  1,0,0,0,0, 0,0,},
+        {{(const uuid16_t*)&uuid2},   NULL,                0,1,  1,0,1,1,1, 0,0,},
+        {{&ATT_DESC_CLIENT_CHAR_CFG}, (void*)&desc2_value, 0,0,  1,1,0,0,0, 0,1,},
+    };
+    eb_att_set_service(att_db, sizeof(att_db)/sizeof(att_db[0]));
     while (1) {
         show_menu();
         eb_schedule();

@@ -10,7 +10,7 @@
 
 static uint16_t conn_handle;
 #define MAX_VAL_LEN 0x1000
-#define MAX_ATT_NUM 0xFFFF
+#define MAX_ATT_NUM 0x10000
 
 enum {
     AT_NONE,
@@ -31,7 +31,7 @@ typedef struct {
     uint8_t perm_read;
     uint8_t perm_write;
 } gatt_db_t;
-static gatt_db_t* db;
+static gatt_db_t db[MAX_ATT_NUM];
 static int p_hdl1, p_hdl2, p_hdl3;
 
 void print_uuid(uint8_t* uuid, int len)
@@ -48,7 +48,7 @@ void print_uuid(uint8_t* uuid, int len)
 
 void dump_db(void)
 {
-    if(!db){ return; }
+    //if(!db){ return; }
     int i;
     for (i = 1; i < MAX_ATT_NUM; i++) {
         switch (db[i].att_type) {
@@ -129,8 +129,8 @@ void dump_db(void)
                 break;
         }
     }
-    free(db);
-    db = NULL;
+    //free(db);
+    //db = NULL;
 }
 
 void db_write(int st_hdl)
@@ -201,10 +201,10 @@ void sdp_event(eb_event_t* param)
 {
     switch (param->evt_id) {
         case EB_EVT_GAP_CONNECTED: {
-            if (!db) {
-                db = malloc(sizeof(gatt_db_t) * MAX_ATT_NUM);
-                assert(db);
-            }
+            //if (!db) {
+            //    db = malloc(sizeof(gatt_db_t) * MAX_ATT_NUM);
+            //    assert(db);
+            //}
             if (param->gap.connected.status == 0) {
                 conn_handle = param->gap.connected.handle;
                 memset(db, 0, sizeof(db));
@@ -267,7 +267,6 @@ void sdp_event(eb_event_t* param)
             break;
         }
         case EB_EVT_GATTC_FIND_INFO_RSP: {
-            eb_gattc_info_t* p = param->gattc.find_info.infos;
             for (int i = 0; i < param->gattc.find_info.info_num; i++) {
                 eb_gattc_info_t* p = &param->gattc.find_info.infos[i];
                 db[p->handle].handle = p->handle;

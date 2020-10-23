@@ -110,6 +110,7 @@ void eb_gattc_read_blob_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t le
 void eb_gattc_write_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 
 void eb_gattc_read_group(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end);
+void eb_gattc_read_by_type_value(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end, uint16_t type, uuid_t *uuid);
 void eb_gattc_read_by_type(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end, uuid_t *uuid);
 void eb_gattc_find_info(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end);
 void eb_gattc_read(uint16_t conn_hd, uint16_t att_hd, uint16_t offset);
