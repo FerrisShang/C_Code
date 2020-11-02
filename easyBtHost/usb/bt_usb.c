@@ -137,7 +137,7 @@ static USB_DEV_T* open_dev(void)
 					usb_close(usb_dev);
 					continue;
 				}
-				usb_reset(usb_dev);
+				//usb_reset(usb_dev);
 				return usb_dev;
 			}
 		}
@@ -160,7 +160,7 @@ static USB_DEV_T* get_usb_dev(void)
 
 int usb_hci_send(uint8_t *data, int len)
 {
-	int ret;
+	int ret = 0;
 	assert(len >= 1 && (data[0] == 0x01 || data[0] == 0x02));
 	if(!usb_dev) return -1;
 	if(data[0] == 0x01){ //cmd

@@ -3,7 +3,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#ifdef __linux__
 #include <termios.h>
+#else
+#include <conio.h>
+#endif
 #include "easyBle.h"
 
 uint16_t conn_handle;
@@ -57,6 +61,7 @@ int get_num(int val_def)
     while (1) {
         char c;
         {
+#ifdef __linux__
             struct termios termios;
             tcgetattr(STDIN_FILENO, &termios);
             termios.c_lflag &= ~(ICANON | ECHO);
@@ -65,10 +70,13 @@ int get_num(int val_def)
             termios.c_lflag |= (ICANON | ECHO);
             tcsetattr(STDIN_FILENO, TCSANOW, &termios);
             c = ch;
+#else
+            c = getch();
+#endif
         }
         if (c >= '0' && c <= '9' && value  < 200000000) {
             value = value * 10 + c - '0'; num++; putchar(c);
-        } else if (c == '\n') {
+        } else if (c == 0x0A || c == 0x0D){
             printf("\n"); if(num) return value; else return val_def;
         } else if ((c == 0x7F || c == '\b') && num) {
             putchar('\b'); putchar(' '); putchar('\b'); num--; value /= 10;
@@ -285,10 +293,12 @@ static void handle_sigint(int sig)
 {
     eb_gap_reset();
     usb_hci_deinit();
+#ifdef __linux__
     struct termios termios;
     tcgetattr(STDIN_FILENO, &termios);
     termios.c_lflag |= (ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &termios);
+#endif
     printf("\n");
     exit(0);
 }

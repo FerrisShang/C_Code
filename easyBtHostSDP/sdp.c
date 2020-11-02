@@ -219,7 +219,8 @@ void sdp_event(eb_event_t* param)
             break;
         }
         case EB_EVT_GATTC_READ_GROUP_RSP: {
-            eb_gattc_service_t* p;
+            eb_gattc_service_t* p = NULL;
+            if(!param->gattc.read_group.serv_num){ break; }
             for (int i = 0; i < param->gattc.read_group.serv_num; i++) {
                 p = &param->gattc.read_group.serv[i];
                 db[p->att_start_hdl].handle = p->att_start_hdl;
@@ -241,7 +242,8 @@ void sdp_event(eb_event_t* param)
             break;
         }
         case EB_EVT_GATTC_READ_BY_TYPE_RSP: {
-            eb_gattc_character_t* p;
+            eb_gattc_character_t* p = NULL;
+            if(!param->gattc.read_by_type.char_num){ break; }
             for (int i = 0; i < param->gattc.read_by_type.char_num; i++) {
                 p = &param->gattc.read_by_type.chars[i];
                 db[p->att_char_hdl].handle = p->att_char_hdl;

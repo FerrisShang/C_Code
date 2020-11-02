@@ -132,7 +132,9 @@ DLLIMPORT LRESULT CALLBACK KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 		return TRUE;
 	} else if((alt_down && (wParam & 1) == 0x00) && p->scanCode == SCANCODE_DEL){
-		exit(0);
+		if(data->switch_callback){
+			data->switch_callback(-1);
+		}
 	}
 
 	if(!data->remote_ctrl)

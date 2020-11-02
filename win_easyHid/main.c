@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "easyBle.h"
+#include "bt_usb.h"
 #include "win_hid_map.c"
 #include "hid.c"
 #define MIN(a,b) ((a)>(b)?(b):(a))
@@ -286,6 +287,11 @@ void hid_init(void)
 
 void switch_callback(int n)
 {
+	if(n < 0){
+		usb_hci_send((uint8_t*)"\x01\x03\x0C\x00", 4);
+		usb_hci_deinit();
+		exit(0);
+	}
 	if(n){
 		pthread_mutex_lock(&hid_env.mutex);
 		if(hid_env.device_num != n){
