@@ -5,8 +5,8 @@ PROJECT_DIR  = .
 OPTIMIZE     = 0
 CONFIG_FLAGS = -g -O0
 LDLIBS		 = -lusb-1.0 -pthread
-#LDLIBS		 = -lusb
-#CONFIG_FLAGS += -m32 -Lusb
+#LDLIBS		 = -lusb -Lusb
+#CONFIG_FLAGS += -m32
 -include AutoConfig/.config
 #include source.mk
 SOURCES		= \

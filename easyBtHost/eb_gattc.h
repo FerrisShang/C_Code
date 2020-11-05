@@ -11,9 +11,11 @@ enum{
     EB_EVT_GATTC_READ_BY_TYPE_RSP,
     EB_EVT_GATTC_READ_RSP,
     EB_EVT_GATTC_WRITE_RSP,
+    EB_EVT_GATTC_NOTIFY,
     EB_EVT_GATTC_CONFIRM,
 };
 
+#undef uuid_t
 typedef struct {
     uint16_t is128bit;
     uint8_t uuid[16];
@@ -80,6 +82,13 @@ typedef struct {
 
 typedef struct {
     uint16_t conn_hdl;
+    uint16_t att_hdl;
+    uint8_t *value;
+    uint16_t len;
+}eb_gattc_hvx_t;
+
+typedef struct {
+    uint16_t conn_hdl;
 }eb_gattc_confirm_t;
 
 
@@ -92,6 +101,7 @@ typedef struct {
         eb_gattc_read_by_type_rsp_t read_by_type;
         eb_gattc_read_rsp_t read;
         eb_gattc_write_rsp_t write;
+        eb_gattc_hvx_t hvx;
         eb_gattc_confirm_t confirm;
     };
 } eb_gattc_event_t;
@@ -108,6 +118,7 @@ void eb_gattc_find_info_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t le
 void eb_gattc_read_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gattc_read_blob_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gattc_write_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
+void eb_gattc_notify_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 
 void eb_gattc_read_group(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end);
 void eb_gattc_read_by_type_value(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end, uint16_t type, uuid_t *uuid);

@@ -10,7 +10,9 @@
 #endif
 #include "easyBle.h"
 
+#define MIN_RSSI (-80)
 uint16_t conn_handle;
+uint8_t m_scan_state;
 
 typedef struct {
     uint8_t adv_type;
@@ -178,6 +180,7 @@ bool timeout_handler(uint8_t id, void* p)
 
 void start_scan(bool enable)
 {
+    m_scan_state = enable;
     if(enable){
         usleep(5000);
         eb_set_timer(0, 2000, timeout_handler, NULL);
@@ -240,8 +243,9 @@ void ble_event_cb(eb_event_t* param)
             show_menu_flag = true;
             break;
         case EB_EVT_GAP_ADV_REPORT: {
-            /* && param->gap.adv_report.rssi < -80*/
+            if(param->gap.adv_report.rssi < MIN_RSSI){ break; }
             uint8_t i;
+            if(!m_scan_state){ break; }
             for (i = 0; i < dev_num; i++) {
                 if (!memcmp(dev_report[i].addr, &param->gap.adv_report.addr, 6)) {
                     break;

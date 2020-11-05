@@ -12,6 +12,7 @@ enum{
     EB_EVT_GAP_PARAM_UPDATED,
     EB_EVT_GAP_LTK_REQUEST,
     EB_EVT_GAP_ADV_REPORT,
+    EB_EVT_GAP_TX_COMPLETE,
 };
 
 typedef enum {

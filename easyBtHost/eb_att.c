@@ -265,6 +265,9 @@ void eb_att_handler(uint8_t *data, uint16_t len)
         case 0x13:{ // Write Response
             eb_gatts_write_response_handler(conn_hd, &data[9], len-9);
             break;}
+        case 0x1B:{ // Notify
+            eb_gattc_notify_rsp_handler(conn_hd, &data[9], len-9);
+            break;}
         case 0x1D:{ // Indicataion
             eb_gatts_indicate_rsp_handler(conn_hd, &data[9], len-9);
             break;}
