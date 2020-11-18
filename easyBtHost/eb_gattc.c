@@ -43,7 +43,11 @@ void eb_gattc_read_group_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t l
 }
 void eb_gattc_read_by_type_value_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
 {
-    eb_event_t evt = { EB_EVT_GATTC_READ_BY_TYPE_VALUE_RSP };
+    eb_event_t evt = { EB_EVT_GATTC_FIND_BY_UUID_RSP };
+    if(data){
+        evt.gattc.find_by_uuid.start_hdl = data[1] + (data[2] << 8);
+        evt.gattc.find_by_uuid.end_hdl = data[3] + (data[4] << 8);
+    }
     eb_event(&evt);
 }
 void eb_gattc_read_by_type_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
@@ -129,6 +133,15 @@ void eb_gattc_read_by_type(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att
         att_hd_start & 0xFF, att_hd_start >> 8, att_hd_end & 0xFF, att_hd_end >> 8};
     memcpy(&cmd[14], &uuid->uuid[0], uuid->is128bit?16:2);
     eb_h4_send(cmd, uuid->is128bit?30:16);
+}
+
+void eb_gattc_find_by_uuid(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end, uuid_t *uuid)
+{
+    uint8_t cmd[9+21] = {0x02, conn_hd&0xFF, conn_hd>>8,
+        uuid->is128bit?0x1b:0x0d, 0x00, uuid->is128bit?0x17:0x09, 0x00, 0x04, 0x00, 0x06,
+        att_hd_start & 0xFF, att_hd_start >> 8, att_hd_end & 0xFF, att_hd_end >> 8, 0x00, 0x28};
+    memcpy(&cmd[16], &uuid->uuid[0], uuid->is128bit?16:2);
+    eb_h4_send(cmd, uuid->is128bit?32:18);
 }
 
 void eb_gattc_find_info(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end)

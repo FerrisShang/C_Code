@@ -7,7 +7,7 @@ enum{
     EB_EVT_GATTC_ERROR_RSP = (EB_GATTC_ID << 8),
     EB_EVT_GATTC_READ_GROUP_RSP,
     EB_EVT_GATTC_FIND_INFO_RSP,
-    EB_EVT_GATTC_READ_BY_TYPE_VALUE_RSP,
+    EB_EVT_GATTC_FIND_BY_UUID_RSP,
     EB_EVT_GATTC_READ_BY_TYPE_RSP,
     EB_EVT_GATTC_READ_RSP,
     EB_EVT_GATTC_WRITE_RSP,
@@ -32,7 +32,6 @@ typedef struct {
     uint16_t att_start_hdl;
     uint16_t att_end_hdl;
     uuid_t uuid;
-
 }eb_gattc_service_t;
 
 typedef struct {
@@ -54,7 +53,9 @@ typedef struct {
 
 typedef struct {
     uint16_t conn_hdl;
-}eb_gattc_read_by_type_value_rsp_t;
+    uint16_t start_hdl;
+    uint16_t end_hdl;
+}eb_gattc_find_by_uuid_rsp_t;
 
 typedef struct {
     uint16_t att_char_hdl;
@@ -97,7 +98,7 @@ typedef struct {
         eb_gattc_err_t err;
         eb_gattc_read_group_rsp_t read_group;
         eb_gattc_find_info_rsp_t find_info;
-        eb_gattc_read_by_type_value_rsp_t read_by_type_value;
+        eb_gattc_find_by_uuid_rsp_t find_by_uuid;
         eb_gattc_read_by_type_rsp_t read_by_type;
         eb_gattc_read_rsp_t read;
         eb_gattc_write_rsp_t write;
@@ -123,6 +124,7 @@ void eb_gattc_notify_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len);
 void eb_gattc_read_group(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end);
 void eb_gattc_read_by_type_value(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end, uint16_t type, uuid_t *uuid);
 void eb_gattc_read_by_type(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end, uuid_t *uuid);
+void eb_gattc_find_by_uuid(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end, uuid_t *uuid);
 void eb_gattc_find_info(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end);
 void eb_gattc_read(uint16_t conn_hd, uint16_t att_hd, uint16_t offset);
 void eb_gattc_write(uint16_t conn_hd, uint16_t att_hd, uint8_t *data, uint16_t len);

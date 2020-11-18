@@ -35,7 +35,7 @@ void eb_l2cap_handler(uint8_t *data, uint16_t len)
             eb_h4_send(cmd, sizeof(cmd));
         }   break;
     }
- }
+}
 
 void l2cap_packet_inc(void)
 {
