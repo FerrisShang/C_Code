@@ -25,14 +25,21 @@ void eb_att_error_response(uint16_t conn_hd, uint16_t att_hd, uint8_t opcode, ui
 }
 static void eb_att_mtu_request_handler(uint16_t conn_hd, uint16_t mtu)
 {
-    uint16_t mtu_support = mtu < ATT_MAX_MTU ? mtu : ATT_MAX_MTU;
-    mtu_support = ATT_DEF_MTU < mtu ? ATT_DEF_MTU : mtu;
+    uint16_t mtu_support = mtu < ATT_MAX_MTU ? mtu < ATT_DEF_MTU ? ATT_DEF_MTU : mtu : ATT_MAX_MTU;
+    mtu_support = ATT_DEF_MTU > mtu ? ATT_DEF_MTU : mtu;
     uint8_t cmd[9+3] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x07, 0x00, 0x03, 0x00, 0x04, 0x00,
                         0x03, mtu_support & 0xFF, mtu_support >> 8};
     eb_h4_send(cmd, sizeof(cmd));
     extern void eb_gap_set_mtu(uint16_t mtu);
     eb_gap_set_mtu(mtu_support);
 }
+
+static void eb_att_mtu_response_handler(uint16_t conn_hd, uint16_t mtu)
+{
+    extern void eb_gap_set_mtu(uint16_t mtu);
+    eb_gap_set_mtu(mtu);
+}
+
 static void eb_att_read_by_group_request_handler(uint16_t conn_hd, uint16_t sh, uint16_t eh)
 {
     uint8_t cmd[9+23] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x11};
@@ -213,6 +220,13 @@ void eb_att_handler(uint8_t *data, uint16_t len)
         case 0x02:{ // Exchange MTU request
             uint16_t mtu = data[10] + (data[11]<<8);
             eb_att_mtu_request_handler(conn_hd, mtu);
+            break;}
+        case 0x03:{
+            uint16_t mtu = data[10] + (data[11]<<8);
+            eb_att_mtu_response_handler(conn_hd, mtu);
+            eb_event_t evt = { EB_EVT_GAP_MTU_UPDATE };
+            evt.gap.mtu_update.mtu = mtu;
+            eb_event(&evt);
             break;}
         case 0x04:{ // Find Infomation request
             eb_att_find_info_request_handler(conn_hd, sh, eh);

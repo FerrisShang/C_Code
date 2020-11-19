@@ -119,6 +119,13 @@ void eb_gattc_notify_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
     eb_event(&evt);
 }
 
+void eb_gattc_mtu_req(uint16_t conn_hd, uint16_t mtu)
+{
+    uint8_t cmd[9+3] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x07, 0x00, 0x03, 0x00, 0x04, 0x00,
+                            0x02, mtu & 0xFF, mtu >> 8 };
+    eb_h4_send(cmd, sizeof(cmd));
+}
+
 void eb_gattc_read_group(uint16_t conn_hd, uint16_t att_hd_start, uint16_t att_hd_end)
 {
     uint8_t cmd[9+7] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x0b, 0x00, 0x07, 0x00, 0x04, 0x00, 0x10,
@@ -167,18 +174,18 @@ void eb_gattc_read(uint16_t conn_hd, uint16_t att_hd, uint16_t offset)
 
 void eb_gattc_write(uint16_t conn_hd, uint16_t att_hd, uint8_t *data, uint16_t len)
 {
-    uint8_t cmd[9+23] = {0x02, conn_hd&0xFF, conn_hd>>8, len+7, 0x00, len+3, 0x00, 0x04, 0x00, 0x12,
+    uint8_t cmd[9+ATT_MAX_MTU] = {0x02, conn_hd&0xFF, conn_hd>>8, len+7, 0x00, len+3, 0x00, 0x04, 0x00, 0x12,
         att_hd & 0xFF, att_hd >> 8 };
-    len = len<20?len:20;
+    len = len<eb_gap_get_mtu()-1?len:eb_gap_get_mtu()-1;
     memcpy(&cmd[12], data, len);
     eb_h4_send(cmd, len+12);
 }
 
 void eb_gattc_write_cmd(uint16_t conn_hd, uint16_t att_hd, uint8_t *data, uint16_t len)
 {
-    uint8_t cmd[9+23] = {0x02, conn_hd&0xFF, conn_hd>>8, len+7, 0x00, len+3, 0x00, 0x04, 0x00, 0x52,
+    uint8_t cmd[9+ATT_MAX_MTU] = {0x02, conn_hd&0xFF, conn_hd>>8, len+7, 0x00, len+3, 0x00, 0x04, 0x00, 0x52,
         att_hd & 0xFF, att_hd >> 8 };
-    len = len<20?len:20;
+    len = len<eb_gap_get_mtu()-1?len:eb_gap_get_mtu()-1;
     memcpy(&cmd[12], data, len);
     eb_h4_send(cmd, len+12);
 }

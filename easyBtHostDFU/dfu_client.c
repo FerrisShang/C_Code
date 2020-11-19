@@ -250,6 +250,9 @@ static void dfu_client_finish_cb(uint8_t state)
 
 void dfu_client_start(uint16_t mtu, uint8_t pkg_max_num, uint8_t prn)
 {
+    if(dfu.state != DFU_ST_IDLE){
+        return;
+    }
     dfu.state = DFU_ST_SEL;
     dfu.cur_type = DFU_PKG_TYPE_CMD;
     dfu.prn = prn;

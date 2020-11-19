@@ -210,8 +210,7 @@ void ble_event_cb(eb_event_t* param)
             if (param->gap.connected.status == 0) {
                 printf(" Connected.\n");
                 conn_handle = param->gap.connected.handle;
-                uuid_t uuid = {0, {0x59, 0xFE}};
-                eb_gattc_find_by_uuid(conn_handle, 1, 0xFFFF, &uuid);
+                eb_gattc_mtu_req(conn_handle, 200);
             } else {
                 printf(" Connected failed: 0x%02X\n", param->gap.connected.status);
             }
@@ -227,12 +226,18 @@ void ble_event_cb(eb_event_t* param)
         }
         case EB_EVT_GATTC_FIND_BY_UUID_RSP: {
             dfu_base_hdl = param->gattc.find_by_uuid.start_hdl;
-            dfu_client_start(23, 8, 100);
+            printf("MTU:%d\n", eb_gap_get_mtu());
+            dfu_client_start(eb_gap_get_mtu(), 8, 100);
+            break;
+        }
+        case EB_EVT_GAP_MTU_UPDATE: {
+            uuid_t uuid = {0, {0x59, 0xFE}};
+            eb_gattc_find_by_uuid(conn_handle, 1, 0xFFFF, &uuid);
             break;
         }
         case EB_EVT_GATTC_ERROR_RSP: {
             if(param->gattc.err.req_opcode == 0x06){ // find by uuid
-                eb_gap_disconnect(conn_handle, 0x13);
+                eb_gap_disconnect(conn_handle, 0x15);
             }
             break;
         }

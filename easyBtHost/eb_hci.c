@@ -20,7 +20,47 @@ void eb_smp_disconnected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_t
 void eb_hci_handler(uint8_t *data, uint16_t len)
 {
     switch(data[0]){
-        case 2: // ACL data
+        case 2:{ // ACL data
+            static uint16_t data_remain, data_len;
+            static uint8_t buffer[ATT_MAX_MTU + 9] = { 0x02 };
+            uint8_t pb = (data[2] >> 4) & 0x03;
+            data[2] &= 0x0F; //ignore the pb flags and bc flag
+
+            uint8_t* p = &data[3];
+            uint16_t length = p[0] + (p[1] << 8);
+            p += sizeof(uint16_t);
+            if (pb == 0x02) { // First packet
+                if ((len - 5) > ATT_MAX_MTU + 4) { // exceed l2cap size
+                    return;
+                }
+                data_remain = p[0] + (p[1] << 8);
+                p += 4; // skip l2cap size & cid
+                data_len = 4;
+                memcpy(buffer, data, 9);
+                buffer[3] = (data_remain + 4) & 0xFF;
+                buffer[4] = (data_remain + 4) >> 8;
+
+                memcpy(&buffer[5+data_len], p, length-4);
+                data_remain -= length - 4;
+                data_len += length - 4;
+            } else if (pb == 0x01) {
+                if (data_remain < len - 5) { // error size
+                    data_remain = 0;
+                    return;
+                }
+                memcpy(&buffer[5+data_len], p, length);
+                data_remain -= length;
+                data_len += length;
+            } else {
+                return;
+            }
+            if (data_remain > 0) {
+                return;
+            }else{
+                data = buffer;
+                len = data_len + 5;
+            }
+
             assert(len >= 9); // 0x02 + HANDLE + ACL_LEN + L2CAP_LEN + CID
             switch(data[7]){
                 case 4: // ATT
@@ -42,7 +82,7 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     }
                     break;
             }
-            break;
+        }   break;
         case 4:{ // HCI Event
             switch(data[1]){ // Event Code
                 case 0x08:{ // Encryption Change Event
@@ -66,12 +106,14 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     }
                     break;}
                 case 0x0F:{ // Command Status
-                    
+
                     break;}
                 case 0x13:{ // Number Of Completed Packets event
                     assert(data[3]);
                     extern void l2cap_packet_comp(int num);
                     l2cap_packet_comp(data[6]);
+                    eb_event_t evt = { EB_EVT_GAP_TX_COMPLETE };
+                    eb_event(&evt);
                     break;}
                 case 0x3E:{ // LE Meta Event
                     assert(len == 3+data[2]);
@@ -135,7 +177,7 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                                 }
                             }
                             break;}
-                        
+
                     }
                     break;}
                 case 0x05:{ // Disconnection Complete Event

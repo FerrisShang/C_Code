@@ -13,6 +13,7 @@ enum{
     EB_EVT_GAP_LTK_REQUEST,
     EB_EVT_GAP_ADV_REPORT,
     EB_EVT_GAP_TX_COMPLETE,
+    EB_EVT_GAP_MTU_UPDATE,
 };
 
 typedef enum {
@@ -107,6 +108,10 @@ typedef struct {
 }eb_gap_param_update_t;
 
 typedef struct {
+    uint16_t mtu;
+}eb_gap_mtu_update_t;
+
+typedef struct {
     union{
         eb_gap_connected_t connected;
         eb_gap_disconnected_t disconnected;
@@ -115,6 +120,7 @@ typedef struct {
         eb_gap_ltk_request_t ltk_request;
         eb_gap_adv_report_t adv_report;
         eb_gap_param_update_t param_update;
+        eb_gap_mtu_update_t mtu_update;
     };
 } eb_gap_event_t;
 

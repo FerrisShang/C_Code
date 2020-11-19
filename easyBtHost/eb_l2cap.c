@@ -93,11 +93,9 @@ uint16_t eb_gap_get_mtu(void);
 static void l2cap_buffer_send(void)
 {
     uint32_t len;
-    uint8_t finish_flag = 0;
     while(l2cap_env.ctrl_pkt_num < MAX_PKT_NUM && L2CAP_FIFO_LENGTH() >= sizeof(len)){
         L2CAP_FIFO_POP(&len, sizeof(len));
         if(len & END_FLAG){
-            finish_flag = 1;
             l2cap_packet_dec(1);
         }
         len = len & ~END_FLAG;
@@ -106,10 +104,6 @@ static void l2cap_buffer_send(void)
         L2CAP_FIFO_POP(buf, len);
         usb_hci_send(buf, len);
         l2cap_env.ctrl_pkt_num++;
-    }
-    if(finish_flag){
-        eb_event_t evt = { EB_EVT_GAP_TX_COMPLETE };
-        eb_event(&evt);
     }
 }
 void eb_l2cap_send(uint8_t *data, uint32_t len)
