@@ -3,6 +3,9 @@
 
 #include "eb_config.h"
 
+#define ATT_MAX_MTU 256
+#define ATT_DEF_MTU 23
+
 typedef uint8_t uuid16_t[2];
 typedef uint8_t uuid128_t[16];
 typedef struct eb_att_db{

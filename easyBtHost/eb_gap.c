@@ -4,6 +4,7 @@
 
 struct eb_gap_env{
     uint16_t conn_handle;
+    uint16_t mtu;
     bdaddr_t local_addr;
     uint8_t local_addr_type;
     bdaddr_t peer_addr;
@@ -24,6 +25,7 @@ void eb_gap_connected_handler(uint16_t con_hdl, bdaddr_t addr, uint8_t addr_type
     gap_env.peer_addr_type = addr_type;
     gap_env.conn_handle = con_hdl;
     gap_env.encrypted = false;
+    gap_env.mtu = 0;
     eb_l2cap_init();
 }
 
@@ -138,3 +140,16 @@ void eb_gap_scan_enable(bool enable, uint8_t filter_dup)
     eb_h4_send(cmd, sizeof(cmd));
 }
 
+void eb_gap_set_mtu(uint16_t mtu)
+{
+    gap_env.mtu = mtu;
+}
+
+uint16_t eb_gap_get_mtu(void)
+{
+    if(gap_env.mtu){
+        return gap_env.mtu;
+    }else{
+        return ATT_DEF_MTU;
+    }
+}

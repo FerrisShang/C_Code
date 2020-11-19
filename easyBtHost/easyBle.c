@@ -55,9 +55,10 @@ void eb_h4_recv(uint8_t *data, int len)
 void eb_h4_send(uint8_t *data, int len)
 {
     if(data[0] == 2){
-        l2cap_packet_inc();
+        eb_l2cap_send(data, len);
+    }else{
+        usb_hci_send(data, len);
     }
-    usb_hci_send(data, len);
 }
 void eb_event(eb_event_t *param)
 {

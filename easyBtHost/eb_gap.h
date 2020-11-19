@@ -139,6 +139,7 @@ void eb_gap_connect(bdaddr_t addr, uint8_t addr_type);
 void eb_gap_connect_cancel(void);
 void eb_gap_disconnect(uint16_t con_hdl, uint8_t reason);
 bool eb_gap_get_encrypted(uint16_t con_hdl);
+uint16_t eb_gap_get_mtu(void);
 
 
 #endif /* __EB_GAP_H__ */

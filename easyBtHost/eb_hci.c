@@ -70,9 +70,8 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     break;}
                 case 0x13:{ // Number Of Completed Packets event
                     assert(data[3]);
-                    l2cap_packet_dec(data[6]);
-                    eb_event_t evt = { EB_EVT_GAP_TX_COMPLETE };
-                    eb_event(&evt);
+                    extern void l2cap_packet_comp(int num);
+                    l2cap_packet_comp(data[6]);
                     break;}
                 case 0x3E:{ // LE Meta Event
                     assert(len == 3+data[2]);

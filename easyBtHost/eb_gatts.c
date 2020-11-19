@@ -60,7 +60,8 @@ void eb_gatts_blob_read_request_handler(uint16_t conn_hd, uint8_t *data, uint16_
 
 void eb_gatts_read_response(uint16_t conn_hd, uint16_t att_hdl, uint16_t offset, uint8_t *data, uint16_t len)
 {
-    uint8_t cmd[9+1+len];
+    uint8_t cmd[9+ATT_MAX_MTU];
+    len = len<eb_gap_get_mtu()-1?len:eb_gap_get_mtu()-1;
     cmd[0] = 0x02;
     cmd[1] = conn_hd&0xFF, cmd[2] = conn_hd>>8;
     cmd[3] = 5 + len;
@@ -118,8 +119,8 @@ void eb_gatts_indicate_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len
 
 static void eb_gatts_send_hvx(uint16_t conn_hd, uint16_t att_hd, uint8_t *data, uint16_t len, uint8_t type)
 {
-    uint8_t cmd[9+23] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00};
-    len = len<20?len:20;
+    uint8_t cmd[9+ATT_MAX_MTU] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00};
+    len = len<eb_gap_get_mtu()-3?len:eb_gap_get_mtu()-3;
     cmd[3] = len + 7;
     cmd[5] = len + 3;
     cmd[9] = type;
