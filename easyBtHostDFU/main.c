@@ -10,11 +10,13 @@
 #include <conio.h>
 #endif
 #include "easyBle.h"
+#include "zip.h"
 #include "dfu_client.h"
 
+#define DEV_SHOW_NUM 5
 uint16_t conn_handle;
 uint16_t dfu_base_hdl;
-uint32_t m_config_size, m_image_size;
+size_t m_config_size, m_image_size;
 char* m_buf_config, *m_buf_image;
 
 uint8_t m_scan_state;
@@ -28,7 +30,7 @@ typedef struct {
     uint8_t rsp_data[31];
     int8_t  rssi;
 } dev_report_t;
-#define DEV_REP_MAX_NUM 32
+#define DEV_REP_MAX_NUM 16
 dev_report_t dev_report[DEV_REP_MAX_NUM];
 dev_report_t* p_dev_report[DEV_REP_MAX_NUM];
 uint8_t dev_num = 0;
@@ -44,18 +46,9 @@ void show_menu(void)
         return;
     }
     show_menu_flag = false;
-    printf(
-        "1. Start Scan\n"
-        "(default:1): "
-    );
-    while (1) {
-        int c = get_num(1);
-        if (c == 1) {
-            start_scan(true); break;
-        } else {
-            puts("Invalid choice.");
-        }
-    }
+    printf("* Press any key to start scan..\n");
+    get_num(0);
+    start_scan(true);
 }
 
 int get_num(int val_def)
@@ -127,7 +120,7 @@ void dump_dev_discovered(void)
             }
         }
     }
-    for (i = dev_num - 1; i >= 0; i--) {
+    for (i = DEV_SHOW_NUM<dev_num?DEV_SHOW_NUM-1:dev_num-1; i>=0; i--) {
         printf("%2d %4d | %c ", i + 1, p_dev_report[i]->rssi, p_dev_report[i]->addr_type == 1 ? 'R' : 'P');
         for (int j = 5; j > 0; j--) printf("%02X:", p_dev_report[i]->addr[j]);
         printf("%02X | %d", p_dev_report[i]->addr[0], p_dev_report[i]->adv_type);
@@ -218,6 +211,7 @@ void ble_event_cb(eb_event_t* param)
         }
         case EB_EVT_GAP_DISCONNECTED:
             printf("* Disconnected, reason: 0x%02X\n", param->gap.disconnected.reason);
+            dfu_client_abort();
             show_menu_flag = true;
             break;
         case EB_EVT_GAP_TX_COMPLETE: {
@@ -325,13 +319,43 @@ uint32_t get_file(char* filename, char** buf)
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3) {
+    if (argc != 2 && argc != 3) {
+        printf("Usage: dfu.exe zip_filename\n");
         printf("Usage: dfu.exe config_filename image_filename\n");
         return 0;
     }
-    m_config_size = get_file(argv[1], &m_buf_config);
-    m_image_size = get_file(argv[2], &m_buf_image);
-    printf("Config size:%d Bytes\nImage size:%d Bytes\n", m_config_size, m_image_size);
+    if(argc == 2){
+        int res;
+        struct zip_t *z = zip_open((const char *)argv[1], 0, 'r');
+        if(z == NULL){
+            printf("Read file error.\n");
+            exit(0);
+        }
+        res = zip_entry_open(z, "firmware.dat");
+        if(res){
+            printf("Cannot find firmware.dat in zip file.\n");
+            exit(0);
+        }
+        res = zip_entry_read(z, (void**)&m_buf_config, &m_config_size);
+        if(res <= 0){
+            printf("Read firmware.dat failed..\n");
+            exit(0);
+        }
+        res = zip_entry_open(z, "firmware.bin");
+        if(res){
+            printf("Cannot find firmware.bin in zip file.\n");
+            exit(0);
+        }
+        res = zip_entry_read(z, (void**)&m_buf_image, &m_image_size);
+        if(res <= 0){
+            printf("Read firmware.dat failed..\n");
+            exit(-1);
+        }
+    }else if(argc == 3){
+        m_config_size = get_file(argv[1], &m_buf_config);
+        m_image_size = get_file(argv[2], &m_buf_image);
+    }
+    printf("Config size:%d Bytes\nImage size:%d Bytes\n", (int)m_config_size, (int)m_image_size);
     signal(SIGINT, handle_sigint);
     eb_init(ble_event_cb);
 
@@ -364,6 +388,21 @@ void dfu_client_gatt_send_cb(uint8_t gatt_type, uint8_t* data, uint32_t length)
         eb_gattc_write_cmd(conn_handle, dfu_base_hdl + 5, data, length);
     }
 }
+static char* get_finish_str(uint8_t res)
+{
+    if(res == DFU_INVALID_CODE)           { return "DFU_INVALID_CODE"; }
+    if(res == DFU_SUCCESS)                { return "DFU_SUCCESS"; }
+    if(res == DFU_OPCODE_NOT_SUPPORT)     { return "DFU_OPCODE_NOT_SUPPORT"; }
+    if(res == DFU_INVALID_PARAMETER)      { return "DFU_INVALID_PARAMETER"; }
+    if(res == DFU_INSUFFICIENT_RESOURCES) { return "DFU_INSUFFICIENT_RESOURCES"; }
+    if(res == DFU_INVALID_OBJECT)         { return "DFU_INVALID_OBJECT"; }
+    if(res == DFU_UNSUPPORTED_TYPE)       { return "DFU_UNSUPPORTED_TYPE"; }
+    if(res == DFU_OPERATION_NOT_PERMITTED){ return "DFU_OPERATION_NOT_PERMITTED"; }
+    if(res == DFU_OPERATION_FAILED)       { return "DFU_OPERATION_FAILED"; }
+    if(res == DFU_UPDATE_ABORT)           { return "DFU_UPDATE_ABORT"; }
+    if(res == DFU_CRC_NOT_MATCH)          { return "DFU_CRC_NOT_MATCH"; }
+    return NULL;
+}
 void dfu_client_evt_cb(uint8_t evt, void* param)
 {
     static int start_time, dfu_size;
@@ -376,16 +415,23 @@ void dfu_client_evt_cb(uint8_t evt, void* param)
             prog_pct = cur_pct;
             dfu_log("dfu prog: %d%%\n", prog_pct);
         }
-        if (!start_time && size > 1024) {
+        if (!start_time && size > 1024) { // Only cal data image
             gettimeofday(&tv, NULL);
             start_time = tv.tv_sec * 1000 + tv.tv_usec / 1000;
             dfu_size = size;
         }
     } else {
         gettimeofday(&tv, NULL);
-        dfu_log("dfu finished: %d, %d Bytes(%d ms)\n", *(uint8_t*)param, dfu_size,
-                (int)(tv.tv_sec * 1000 + tv.tv_usec / 1000) - start_time);
-        start_time = 0;
+        if(start_time == 0){
+            dfu_log("dfu finished: 0x%02X(%s)\n", *(uint8_t*)param,
+                    get_finish_str(*(uint8_t*)param));
+        }else{
+            dfu_log("dfu finished: 0x%02X(%s), %d Bytes(%d ms)\n",
+                    *(uint8_t*)param, get_finish_str(*(uint8_t*)param), dfu_size,
+                    (int)(tv.tv_sec * 1000 + tv.tv_usec / 1000) - start_time);
+            start_time = 0;
+        }
+        eb_gap_disconnect(conn_handle, 0x15);
     }
 }
 

@@ -233,6 +233,13 @@ static uint32_t get_crc_by_offset(uint8_t type, uint32_t offset)
 // return 1->success, 0->failed, -1->ignore
 static int check_crc(uint32_t offset, uint32_t crc)
 {
+    dfu_log("Check CRC(type:%d), O:%d<==>%d,C:0x%08X<==>0x%08X\n",
+            dfu.cur_type,
+            dfu.cur_type==DFU_PKG_TYPE_CMD?dfu.cmd_offset:dfu.data_offset,
+            offset,
+            dfu.cur_type==DFU_PKG_TYPE_CMD?dfu.cmd_crc:dfu.data_crc,
+            crc
+            );
     if(dfu.cur_type == DFU_PKG_TYPE_CMD){
         if(offset < dfu.cmd_offset){ return -1; }
         return offset == dfu.cmd_offset && crc == dfu.cmd_crc;
@@ -263,6 +270,9 @@ void dfu_client_start(uint16_t mtu, uint8_t pkg_max_num, uint8_t prn)
 
 void dfu_client_abort(void)
 {
+    if(dfu.state == DFU_ST_IDLE){
+        return;
+    }
     dfu.state = DFU_ST_IDLE;
     dfu.pkg_num = 0;
     dfu_client_finish_cb(DFU_UPDATE_ABORT);
@@ -273,6 +283,7 @@ void dfu_client_gatt_recv(uint8_t *data, uint32_t length)
     if(length >= 3 && data && data[0] == DFU_CTRL_RESPONSE){
         uint8_t opcode = data[1], st = dfu.state, res = data[2];
         if(res != DFU_SUCCESS){
+            dfu_log("Slave report error: 0x%X\n", res);
             dfu_client_finish_cb(res);
             return;
         }
