@@ -12,8 +12,8 @@ gcc \
 	eb_*.c \
 	usb/*.c \
 	alg/zip.c \
-	-Ialg -I./usb -L./usb -lpthread -Wall --std=c99 \
-	-m32 -lusb \
+	-Ialg -I./usb -L./usb -lpthread -Wall --std=c99 -o dfu.exe \
 #	-lusb-1.0 -fsanitize=address -fsanitize-memory-track-origins -fno-omit-frame-pointer  -O1 -g \
+	-m32 -lusb \
 
 rm -rf usb easy*.c easy*.h eb_*.c eb_*.h *.def alg

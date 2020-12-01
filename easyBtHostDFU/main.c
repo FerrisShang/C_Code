@@ -320,8 +320,10 @@ uint32_t get_file(char* filename, char** buf)
 int main(int argc, char* argv[])
 {
     if (argc != 2 && argc != 3) {
-        printf("Usage: dfu.exe zip_filename\n");
-        printf("Usage: dfu.exe config_filename image_filename\n");
+        printf("Usage:\n");
+        printf("\tdfu.exe filename.zip\n");
+        printf("    or\n");
+        printf("\tdfu.exe filename.dat filename.bin\n");
         return 0;
     }
     if(argc == 2){

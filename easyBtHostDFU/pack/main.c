@@ -64,11 +64,14 @@ uint32_t    m_bin_size;
 void usage(void)
 {
     print(
-            "Generate private/public key          : exec key\n"
-            "Generate public key from private key : exec key \"filename\"\n"
-            "Generate DFU packet: exec pack version [key file] N x [image info]\n"
-            "                     [image info] : [filename type(normal) version]\n"
-            "                     [image info] : [filename type(0x5F:raw) version address]\n"
+            "Usage:\n"
+            "        Generate private/public key          : CreateFwTool.exe key\n"
+            "    or\n"
+            "        Generate public key from private key : CreateFwTool.exe key \"filename\"\n"
+            "    or\n"
+            "        Generate DFU packet: CreateFwTool.exe pack version [key file] [image info]xN\n"
+            "                             [image info] : [filename type(normal)   version]\n"
+            "                             [image info] : [filename type(0x5F:raw) version address]\n"
          );
 }
 void dump(void *p, int len)
@@ -165,7 +168,7 @@ int pack_info(int argc, char *argv[], pack_info_t *info, uint8_t *bin_buffer, ui
 	info->version = str2u32(str_version);
 	print("DFU Version: 0x%08X\n", info->version);
 
-    if(strcmp(str_ctrl, "0")){
+    if(str_ctrl[0] != '0'){
         info->control |= DFU_CTRL_SIGN_BIT;
     }
 	print("Control Field: 0x%04X\n", info->control);
@@ -174,11 +177,15 @@ int pack_info(int argc, char *argv[], pack_info_t *info, uint8_t *bin_buffer, ui
 	while(i < argc){
 		char *filename = argv[i++];
 		char *file_buf;
+		if(i == argc){ break; }
 		info->imgs[info->image_num].type = str2u32(argv[i++]);
 		if(info->imgs[info->image_num].type != IMAGE_TYPE_RAW){
+			if(i == argc){ break; }
 			info->imgs[info->image_num].normal.version = str2u32(argv[i++]);
 		}else{
+			if(i == argc){ break; }
 			info->imgs[info->image_num].raw.flash_itf_id = str2u32(argv[i++]);
+			if(i == argc){ break; }
 			info->imgs[info->image_num].raw.address = str2u32(argv[i++]);
 		}
 		int filesize = get_file(filename, &file_buf);
