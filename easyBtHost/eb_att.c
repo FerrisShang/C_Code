@@ -163,7 +163,7 @@ static void eb_att_read_by_type_request_value_handler(uint16_t conn_hd, uint16_t
                 cmd[10] = len + 2;
                 cmd[11] = (i+1)&0xFF;
                 cmd[12] = (i+1)>>8;
-                memcpy(&cmd[10], evt.gatts.read.value, len);
+                memcpy(&cmd[10], "\x04\x36\x36\x36\x36\x36\x36"/*evt.gatts.read.value*/, len+4);
                 eb_h4_send(cmd, cmd[3]+5);
             }else{
                 eb_att_error_response(conn_hd, sh, 0x08, 0x0A); // ATT not found

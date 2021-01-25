@@ -14,6 +14,7 @@ mutex mtx, var_lock;
 #define debug(...) printf(__VA_ARGS__)
 
 vector<CScriptParse*> scParses;
+#if 0
 void share_variable(CScriptParse &scParse, char *val_name)
 {
 	auto val = scParse.get_val(val_name);
@@ -21,6 +22,7 @@ void share_variable(CScriptParse &scParse, char *val_name)
 		sp->update_variable(val_name, val);
 	}
 }
+#endif
 void create_parse(const char *com, int baud, const char *filename)
 {
 	CBtIO btio;
@@ -29,7 +31,7 @@ void create_parse(const char *com, int baud, const char *filename)
 		debug("Open uart \"%s\" failed: %d\n", com, res);
 		return;
 	}
-	CScriptParse scParse((char*)filename, com, &mtx, &var_lock);
+	CScriptParse scParse((char*)filename, com, &mtx);
 	mtx.lock();
 	scParses.push_back(&scParse);
 	mtx.unlock();
@@ -98,7 +100,7 @@ void create_parse(const char *com, int baud, const char *filename)
 					while(*s == ' ' && s-(char*)&send_data[i][0]<send_data[i].size())s++;
 					strncpy(v, s, send_data[i].size()-(s-(char*)&send_data[i][0]));
 					char *e=v; while(isalnum(*e)||*e=='_')e++; *e = '\0';
-					share_variable(scParse, v);
+					//share_variable(scParse, v);
 			}
 		}
 		if(scParse.isFinished()){

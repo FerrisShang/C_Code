@@ -25,7 +25,7 @@ env_t* get_global_buf(env_t* env)
 {
     if (env) return env;
 #define BUF_SIZE 4096
-    char* szName = (char*)"Global\\EnvMappingObject";
+    char* szName = (char*)"Global\\ImplicitEnvMappingObject";
     HANDLE hMapFile;
     LPCTSTR pBuf;
     hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, szName);
@@ -43,8 +43,9 @@ env_t* get_global_buf(env_t* env)
     do{ \
         char b[1024]; \
         sprintf(b, __VA_ARGS__); \
-        log("%s\n", b); \
+        log("<<< %s\n", b); \
         env->btio->send((uint8_t*)b, strlen(b)+1); \
+        fputs("<<< ", env->fp); \
         fputs(b, env->fp); \
         fputs("\n", env->fp); \
         fflush(env->fp); \
@@ -101,13 +102,13 @@ void Om_ImplicitStartTestCase(char* strTestCaseName)
             log("*** Open serial port failed\n");
         }
     }
-    ulog("<<< ImplicitStartTestCase: %s", strTestCaseName);
+    ulog("ImplicitStartTestCase: %s", strTestCaseName);
 }
 
 void Om_ImplicitTestCaseFinished(void)
 {
     env = get_global_buf(env);
-    ulog("<<< ImplicitTestCaseFinished");
+    ulog("ImplicitTestCaseFinished");
     if (env->btio) {
         env->btio->stop();
         delete env->btio;
@@ -132,12 +133,16 @@ char* Om_ImplicitSendStyle(char* strMmiText, UINT mmiStyle)
         MMI_Style_Edit2 =          0x12140,    // Select item from a list | OK, Cancel buttons      | Default: OK
     };
     log("*** Style:0x%X [%s]\n", mmiStyle, style_2_str(mmiStyle));
-    ulog("<<< ImplicitSendStyle:0x%05x:%s", mmiStyle, strMmiText);
+    ulog("ImplicitSendStyle:0x%05x:%s", mmiStyle, strMmiText);
     memset(env->b, 0, ENV_BUF_SIZE);
     int len = env->btio->recv((uint8_t*)env->b, ENV_BUF_SIZE, 500);
     if (len > 0) {
         log(">>> %s\n", env->b);
-        return env->b;
+        if (!strcmp("RETURN_NULL", env->b)) {
+            return NULL;
+        } else {
+            return env->b;
+        }
     } else {
         log(">>> [Timeout]\n");
     }

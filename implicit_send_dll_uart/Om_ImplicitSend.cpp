@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <string>
-#include <ImplicitSendAPI.h>
+#include "ImplicitSendAPI.h"
 #include "Om_ImplicitSend.h"
 
 extern "C" bool WINAPI InitImplicitSend(void);
@@ -10,18 +10,17 @@ extern "C" char* WINAPI ImplicitSendStyle(std::string &strMmiText, UINT mmiStyle
 extern "C" char* WINAPI ImplicitSendStyleEx(std::string &strMmiText, UINT    mmiStyle, std::string &strBdAddr);
 extern "C" char* WINAPI ImplicitSendPinCodeEx(std::string &strBdAddr);
 extern "C" char* WINAPI ImplicitSendPinCode(void);
-#if 1
+#if 0
 #define STR2PCHAR(p) (char*)(*((int*)(p) + 1))
 #else
 static char* STR2PCHAR(void* p)
 {
-    char* str = (char*)((int*)p + 1);
-    for (int i = 0; i < 4; i++) {
-        if (str[i] < 0x20) {
-            return (char*)(size_t)(*((int*)p + 1));
-        }
+    size_t str_addr = (size_t)p + sizeof(size_t);
+    if ((*(size_t*)str_addr & 0xF0000000) == 0) {
+        return (char*) (size_t) * (size_t*)str_addr;
+    } else {
+        return (char*) str_addr;
     }
-    return str;
 }
 #endif
 extern "C" bool WINAPI InitImplicitSend(void)

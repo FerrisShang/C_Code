@@ -47,9 +47,11 @@ void ble_event_cb(eb_event_t *param)
     switch(param->evt_id){
         case EB_EVT_GAP_RESET:{
 #if APP_MASTER == 0
-            eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, (uint8_t*)"\x02\x01\x06\x03\x03\x12\x18\x03\x19\xC2\x03", 11);
+            //eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, (uint8_t*)"\x02\x01\x06\x03\x03\x12\x18\x03\x19\xC2\x03", 11);
+            eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, (uint8_t*)"\x02\x01\x06\x03\x19\xC2\x03\x03\x03\x12\x18\x12\x08\x2A\x48\x4C\x32\x54\x4E\x31\x45\x3A\x35\x39\x30\x30\x30\x30\x35\x30", 30);
             usleep(5000);
-            eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, (uint8_t*)"\x02\x09\x5F", 3);
+            //eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, (uint8_t*)"\x02\x09\x5F", 3);
+            eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, (uint8_t*)"\x49\x00\x00\x59\x35\x83", 6);
             usleep(5000);
             eb_gap_adv_set_param(0x30, 0x40, EB_GAP_ADV_IND, EB_ADV_ADDR_TYPE_RANDOM, 0, NULL, 0x07, EB_ADV_FILTER_DEFAULT);
             usleep(5000);
@@ -197,7 +199,7 @@ const eb_att_db_t att_db[] = {
     {{&ATT_DECL_PRIMARY_SERVICE}, (void*)&serv1,       1,0,  1,0,0,0,0, 0,0,},
     {{&ATT_DECL_CHARACTERISTIC},  NULL,                0,0,  1,0,0,0,0, 0,0,},
     {{&uuid1},                    NULL,                0,0,  1,1,1,1,1, 0,0,},
-    {{&ATT_DESC_CLIENT_CHAR_CFG}, NULL,                0,0,  1,1,0,0,0, 0,0,},
+    {{&ATT_DESC_CLIENT_CHAR_CFG}, "1231231231",                0,0,  1,1,0,0,0, 0,0,},
     {{&ATT_DECL_PRIMARY_SERVICE}, (void*)&serv2,       1,1,  1,1,1,1,1, 0,0,},
     {{&ATT_DECL_CHARACTERISTIC},  NULL,                0,0,  1,0,0,0,0, 0,0,},
     {{(const uuid16_t*)&uuid2},   NULL,                0,1,  1,0,1,1,1, 0,0,},
