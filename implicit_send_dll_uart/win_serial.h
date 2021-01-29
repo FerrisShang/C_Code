@@ -170,7 +170,13 @@ class CBtIO: CSerial{
             if(res > ERR_NO_ERR){
                 buf.resize(res);
                 if(btio->callback){ btio->callback(buf, btio->cb_param); }
-                else{ btio->packages.push(buf); }
+                else{
+                    if(buf[0] == 0xA5){
+                        printf("[DBG]----->: %s\n", &buf[1]);
+                    }else{
+                        btio->packages.push(buf);
+                    }
+                }
             }
             else if(res == ERR_FMT || res == ERR_TOUT){
                 if(btio->exit_flag){

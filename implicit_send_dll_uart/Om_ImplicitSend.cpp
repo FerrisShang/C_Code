@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <ctype.h>
 #include <string>
 #include "ImplicitSendAPI.h"
 #include "Om_ImplicitSend.h"
@@ -16,7 +17,9 @@ extern "C" char* WINAPI ImplicitSendPinCode(void);
 static char* STR2PCHAR(void* p)
 {
     size_t str_addr = (size_t)p + sizeof(size_t);
-    if ((*(size_t*)str_addr & 0xF0000000) == 0) {
+    if ((*(size_t*)str_addr & 0xF0000000) == 0 ||
+            !isprint(*((char*)str_addr + 0)) || !isprint(*((char*)str_addr + 1)) ||
+            !isprint(*((char*)str_addr + 2)) || !isprint(*((char*)str_addr + 3))) {
         return (char*) (size_t) * (size_t*)str_addr;
     } else {
         return (char*) str_addr;

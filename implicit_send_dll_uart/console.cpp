@@ -17,9 +17,9 @@ void RedirectIOToConsole(char create_console)
     int hConHandle;
     long lStdHandle;
     CONSOLE_SCREEN_BUFFER_INFO coninfo;
-    FILE* fp;
+    FILE *fp;
 // allocate a console for this app
-    if (create_console) AllocConsole();
+    if(create_console) AllocConsole();
 // set the screen buffer to be big enough to let us scroll text
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE),
                                &coninfo);
