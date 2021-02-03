@@ -199,7 +199,7 @@ const eb_att_db_t att_db[] = {
     {{&ATT_DECL_PRIMARY_SERVICE}, (void*)&serv1,       1,0,  1,0,0,0,0, 0,0,},
     {{&ATT_DECL_CHARACTERISTIC},  NULL,                0,0,  1,0,0,0,0, 0,0,},
     {{&uuid1},                    NULL,                0,0,  1,1,1,1,1, 0,0,},
-    {{&ATT_DESC_CLIENT_CHAR_CFG}, "1231231231",                0,0,  1,1,0,0,0, 0,0,},
+    {{&ATT_DESC_CLIENT_CHAR_CFG}, NULL,                0,0,  1,1,0,0,0, 0,0,},
     {{&ATT_DECL_PRIMARY_SERVICE}, (void*)&serv2,       1,1,  1,1,1,1,1, 0,0,},
     {{&ATT_DECL_CHARACTERISTIC},  NULL,                0,0,  1,0,0,0,0, 0,0,},
     {{(const uuid16_t*)&uuid2},   NULL,                0,1,  1,0,1,1,1, 0,0,},

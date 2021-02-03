@@ -3,7 +3,7 @@
 
 #include "eb_config.h"
 
-#define ATT_MAX_MTU 256
+#define ATT_MAX_MTU 247
 #define ATT_DEF_MTU 23
 
 typedef uint8_t uuid16_t[2];

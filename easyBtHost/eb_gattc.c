@@ -119,10 +119,12 @@ void eb_gattc_notify_rsp_handler(uint16_t conn_hd, uint8_t *data, uint16_t len)
     eb_event(&evt);
 }
 
+int pending_mtu;
 void eb_gattc_mtu_req(uint16_t conn_hd, uint16_t mtu)
 {
     uint8_t cmd[9+3] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x07, 0x00, 0x03, 0x00, 0x04, 0x00,
                             0x02, mtu & 0xFF, mtu >> 8 };
+    pending_mtu = mtu;
     eb_h4_send(cmd, sizeof(cmd));
 }
 

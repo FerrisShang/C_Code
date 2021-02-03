@@ -4,8 +4,8 @@
 #include "eb_l2cap.h"
 
 struct eb_l2cap_env{
-    uint8_t host_pkt_num;
-    uint8_t ctrl_pkt_num;
+    int8_t host_pkt_num;
+    int8_t ctrl_pkt_num;
 };
 
 static struct eb_l2cap_env l2cap_env;
@@ -69,24 +69,26 @@ static l2cap_size_t fr, ra;
 #define L2CAP_FIFO_AVAIL()  (L2CAP_BUFFER_SIZE-L2CAP_FIFO_LENGTH()-1)
 #define L2CAP_FIFO_CLEAR()  do{ fr = ra; } while(0)
 #define L2CAP_FIFO_PUSH(data, len)                         \
-    do{                                                   \
-        l2cap_size_t l = L2CAP_BUFFER_SIZE-ra;              \
-        l = l < (len) ? l : (len);                        \
+    do{                                                    \
+        assert(L2CAP_FIFO_AVAIL()>=len);                   \
+        l2cap_size_t l = L2CAP_BUFFER_SIZE-ra;             \
+        l = l < (len) ? l : (len);                         \
         memcpy(&l2cap_buffer[ra], data, l);                \
         memcpy(l2cap_buffer, (uint8_t*)(data)+l, (len)-l); \
         ra = (ra + (len)) & (L2CAP_BUFFER_SIZE-1);         \
     }while(0);
-#define L2CAP_FIFO_POP(buf, len)                          \
-    do{                                                  \
+#define L2CAP_FIFO_POP(buf, len)                           \
+    do{                                                    \
+        assert(L2CAP_FIFO_LENGTH()>=len);                  \
         l2cap_size_t l = L2CAP_BUFFER_SIZE-fr;             \
-        l = l < (len) ? l : (len);                       \
-        memcpy(buf, &l2cap_buffer[fr], l);                \
-        memcpy((uint8_t*)(buf)+l, l2cap_buffer, (len)-l); \
-        fr = (fr + (len)) & (L2CAP_BUFFER_SIZE-1);        \
+        l = l < (len) ? l : (len);                         \
+        memcpy(buf, &l2cap_buffer[fr], l);                 \
+        memcpy((uint8_t*)(buf)+l, l2cap_buffer, (len)-l);  \
+        fr = (fr + (len)) & (L2CAP_BUFFER_SIZE-1);         \
     }while(0);
 /*** l2cap fifo ***/
 #define END_FLAG 0x80000000
-#define MAX_PKT_NUM  10
+#define MAX_PKT_NUM  8
 #define ACL_MAX_SIZE 27
 int usb_hci_send(uint8_t* data, int len);
 uint16_t eb_gap_get_mtu(void);

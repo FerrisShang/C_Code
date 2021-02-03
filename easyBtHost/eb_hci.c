@@ -1,7 +1,6 @@
 #include <string.h>
 #include "eb_hci.h"
 
-
 void eb_hci_init(void)
 {
     ;
@@ -24,7 +23,6 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
             static uint16_t data_remain, data_len;
             static uint8_t buffer[ATT_MAX_MTU + 9] = { 0x02 };
             uint8_t pb = (data[2] >> 4) & 0x03;
-            data[2] &= 0x0F; //ignore the pb flags and bc flag
 
             uint8_t* p = &data[3];
             uint16_t length = p[0] + (p[1] << 8);
@@ -52,6 +50,7 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                 data_remain -= length;
                 data_len += length;
             } else {
+                assert(0);
                 return;
             }
             if (data_remain > 0) {
@@ -171,13 +170,12 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                                     memcpy(&cmd[6], ltk, 16);
                                     eb_h4_send(cmd, sizeof(cmd));
                                 }else{
-                                    uint8_t cmd[4+2] = {0x01, 0x1B, 0x20, 0x12};
+                                    uint8_t cmd[4+2] = {0x01, 0x1B, 0x20, 0x02};
                                     cmd[4] = data[4]; cmd[5] = data[5];
                                     eb_h4_send(cmd, sizeof(cmd));
                                 }
                             }
                             break;}
-
                     }
                     break;}
                 case 0x05:{ // Disconnection Complete Event
@@ -189,6 +187,8 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     eb_smp_disconnected_handler(evt.gap.connected.handle, evt.gap.connected.peer_addr, data[8]);
                     eb_event(&evt);
                     break;}
+                default : // Unsupport event
+                    assert(0);
             }
             break;}
         default:

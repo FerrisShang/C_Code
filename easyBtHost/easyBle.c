@@ -30,7 +30,7 @@ void eb_init(void(*ble_event_cb)(eb_event_t *))
     eb_gatts_init();
     eb_smp_init();
     // Init hci interface
-    usb_hci_init(3, eb_h4_recv);
+    usb_hci_init(USB_LOG_BTSNOOP, eb_h4_recv);
     eb_h4_send((uint8_t*)"\x01\x03\x0C\x00", 4);
     usleep(1000);
 }
@@ -38,7 +38,7 @@ void eb_init(void(*ble_event_cb)(eb_event_t *))
 void eb_schedule(void)
 {
     if(hci_buf_cnt()){
-        uint8_t len;
+        uint32_t len;
         uint8_t *data = hci_buf_get(&len);
         eb_hci_handler(data, len);
     }else{

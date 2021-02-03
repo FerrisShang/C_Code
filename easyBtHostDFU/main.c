@@ -176,10 +176,10 @@ void start_scan(bool enable)
     if (enable) {
         usleep(5000);
         eb_set_timer(0, 2000, timeout_handler, NULL);
-        eb_gap_scan_enable(true, 1);
-        puts("* Scan started");
         memset(dev_report, 0, sizeof(dev_report));
         dev_num = 0;
+        eb_gap_scan_enable(true, 1);
+        puts("* Scan started");
     } else {
         eb_del_timer(0);
         eb_gap_scan_enable(false, 0);
@@ -230,9 +230,7 @@ void ble_event_cb(eb_event_t* param)
             break;
         }
         case EB_EVT_GATTC_ERROR_RSP: {
-            if(param->gattc.err.req_opcode == 0x06){ // find by uuid
-                eb_gap_disconnect(conn_handle, 0x15);
-            }
+            eb_gap_disconnect(conn_handle, 0x15);
             break;
         }
         case EB_EVT_GAP_ADV_REPORT: {
@@ -358,9 +356,11 @@ int main(int argc, char* argv[])
         m_image_size = get_file(argv[2], &m_buf_image);
     }
     printf("Config size:%d Bytes\nImage size:%d Bytes\n", (int)m_config_size, (int)m_image_size);
+
+
+
     signal(SIGINT, handle_sigint);
     eb_init(ble_event_cb);
-
     eb_att_set_service(NULL, 0);
     while (1) {
         show_menu();

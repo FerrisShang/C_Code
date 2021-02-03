@@ -1,11 +1,12 @@
 #include "stdlib.h"
+#include "assert.h"
 #include "string.h"
 #include "dfu_client.h"
 
 #define DFU_FORSE_CREATE       0
 #define BUF_SIZE               512   // Max size request in callback
 #define DFU_FIFO_SIZE          1024
-#define MAX_DFU_SEND_SIZE      495
+#define MAX_DFU_SEND_SIZE      247
 #if DFU_FIFO_SIZE < BUF_SIZE + MAX_DFU_SEND_SIZE
 #error "DFU_FIFO_SIZE MUST larget then BUF_SIZE + MAX_DFU_SEND_SIZE"
 #endif
@@ -43,11 +44,13 @@ enum{
 static uint8_t dfu_buffer[DFU_FIFO_SIZE];
 static uint32_t dfu_sum_cnt;
 static uint32_t fr, ra;
+
 #define DFU_FIFO_LENGTH() ((ra-fr)&(DFU_FIFO_SIZE-1))
 #define DFU_FIFO_AVAIL()  (DFU_FIFO_SIZE-DFU_FIFO_LENGTH()-1)
 #define DFU_FIFO_CLEAR()  do{ fr = ra; dfu_sum_cnt = 0; } while(0)
 #define DFU_FIFO_PUSH(data, len)                         \
     do{                                                  \
+        assert(DFU_FIFO_AVAIL()>=len);                   \
         uint32_t l = DFU_FIFO_SIZE-ra;                   \
         l = l < (len) ? l : (len);                       \
         memcpy(&dfu_buffer[ra], data, l);                \
@@ -57,6 +60,7 @@ static uint32_t fr, ra;
     }while(0);
 #define DFU_FIFO_POP(buf, len)                           \
     do{                                                  \
+        assert(DFU_FIFO_LENGTH()>=len);                  \
         uint32_t l = DFU_FIFO_SIZE-fr;                   \
         l = l < (len) ? l : (len);                       \
         memcpy(buf, &dfu_buffer[fr], l);                 \
@@ -304,7 +308,7 @@ void dfu_client_gatt_recv(uint8_t *data, uint32_t length)
                 }else{
                     st_write();
                 }
-            }else if(res == 0){
+            }else if(res <= 0){
                 dfu_client_finish_cb(DFU_CRC_NOT_MATCH);
             }
         }else if(opcode == DFU_CTRL_EXECUTE && st == DFU_ST_PD_EXECUTE){

@@ -26,7 +26,6 @@ void eb_att_error_response(uint16_t conn_hd, uint16_t att_hd, uint8_t opcode, ui
 static void eb_att_mtu_request_handler(uint16_t conn_hd, uint16_t mtu)
 {
     uint16_t mtu_support = mtu < ATT_MAX_MTU ? mtu < ATT_DEF_MTU ? ATT_DEF_MTU : mtu : ATT_MAX_MTU;
-    mtu_support = ATT_DEF_MTU > mtu ? ATT_DEF_MTU : mtu;
     uint8_t cmd[9+3] = {0x02, conn_hd&0xFF, conn_hd>>8, 0x07, 0x00, 0x03, 0x00, 0x04, 0x00,
                         0x03, mtu_support & 0xFF, mtu_support >> 8};
     eb_h4_send(cmd, sizeof(cmd));
@@ -37,7 +36,8 @@ static void eb_att_mtu_request_handler(uint16_t conn_hd, uint16_t mtu)
 static void eb_att_mtu_response_handler(uint16_t conn_hd, uint16_t mtu)
 {
     extern void eb_gap_set_mtu(uint16_t mtu);
-    eb_gap_set_mtu(mtu);
+    extern int pending_mtu;
+    eb_gap_set_mtu(pending_mtu<mtu?pending_mtu:mtu);
 }
 
 static void eb_att_read_by_group_request_handler(uint16_t conn_hd, uint16_t sh, uint16_t eh)
