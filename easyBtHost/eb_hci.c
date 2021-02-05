@@ -1,12 +1,15 @@
 #include <string.h>
 #include "eb_hci.h"
+#include "eb_hci.h"
 
+static char hci_cmd_pending;
 void eb_hci_init(void)
 {
-    ;
+    hci_cmd_pending = 0;
 }
 
 static void em_hci_encrypted_handler(uint8_t *encrypted);
+static void eb_hci_pending_send(void);
 
 void eb_smp_encrpyt_change(void);
 void eb_gap_set_encrypted(uint16_t con_hdl, bool encrypted);
@@ -93,6 +96,8 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     eb_event(&evt);
                     break;}
                 case 0x0E:{ // Command Complete
+                    hci_cmd_pending = 0;
+                    eb_hci_pending_send();
                     uint16_t opcode = data[4] + (data[5]<<8);
                     switch(opcode){
                         case 0x2017:{ // LE Encrypt
@@ -105,7 +110,8 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     }
                     break;}
                 case 0x0F:{ // Command Status
-
+                    hci_cmd_pending = 0;
+                    eb_hci_pending_send();
                     break;}
                 case 0x13:{ // Number Of Completed Packets event
                     assert(data[3]);
@@ -217,5 +223,51 @@ static void em_hci_encrypted_handler(uint8_t *encrypted)
         m_hci_encrypt_cb = NULL;
         callback(encrypted);
     }
+}
+
+/*** hci fifo ***/
+typedef uint8_t hci_size_t;
+#define HCI_BUFFER_SIZE (300)
+#define BUF_NUM  (1<<4)
+__attribute__((aligned(4))) static uint8_t hci_buffer[BUF_NUM][HCI_BUFFER_SIZE];
+static hci_size_t fr, ra;
+#define HCI_FIFO_LENGTH() ((ra-fr)&(BUF_NUM-1))
+#define HCI_FIFO_AVAIL()  (BUF_NUM-HCI_FIFO_LENGTH()-1)
+#define HCI_FIFO_CLEAR()  do{ fr = ra; } while(0)
+#define HCI_FIFO_PUSH(data, len)                              \
+    do{                                                       \
+        assert(HCI_BUFFER_SIZE>=len+sizeof(uint16_t));        \
+        void *p = hci_buffer[ra]; *(uint16_t*)p = len;        \
+        memcpy(&hci_buffer[ra][sizeof(uint16_t)], data, len); \
+        ra = (ra + 1) & (BUF_NUM-1);                          \
+        assert(fr != ra);                                     \
+    }while(0);
+#define HCI_FIFO_POP(buf, len)                                \
+    do{                                                       \
+        assert(fr != ra);                                     \
+        void *p = hci_buffer[fr];                             \
+        len = *(uint16_t*)p;                                  \
+        assert(HCI_BUFFER_SIZE>=len+sizeof(uint16_t));        \
+        buf = &hci_buffer[fr][sizeof(uint16_t)];              \
+        fr = (fr + 1) & (BUF_NUM-1);                          \
+    }while(0);
+/*** hci fifo ***/
+
+int usb_hci_send(uint8_t* data, int len);
+static void eb_hci_pending_send(void)
+{
+    uint8_t *data;
+    uint16_t len;
+    if(!hci_cmd_pending && HCI_FIFO_LENGTH()){
+        HCI_FIFO_POP(data, len);
+        hci_cmd_pending = 1;
+        usb_hci_send(data, len);
+    }
+}
+
+void eb_hci_send(uint8_t *data, int len)
+{
+    HCI_FIFO_PUSH(data, len);
+    eb_hci_pending_send();
 }
 

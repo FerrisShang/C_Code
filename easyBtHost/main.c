@@ -47,23 +47,16 @@ void ble_event_cb(eb_event_t *param)
     switch(param->evt_id){
         case EB_EVT_GAP_RESET:{
 #if APP_MASTER == 0
-            //eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, (uint8_t*)"\x02\x01\x06\x03\x03\x12\x18\x03\x19\xC2\x03", 11);
-            eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, (uint8_t*)"\x02\x01\x06\x03\x19\xC2\x03\x03\x03\x12\x18\x12\x08\x2A\x48\x4C\x32\x54\x4E\x31\x45\x3A\x35\x39\x30\x30\x30\x30\x35\x30", 30);
-            usleep(5000);
-            //eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, (uint8_t*)"\x02\x09\x5F", 3);
-            eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, (uint8_t*)"\x49\x00\x00\x59\x35\x83", 6);
-            usleep(5000);
+            eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, (uint8_t*)"\x02\x01\x06\x03\x03\x12\x18\x03\x19\xC2\x03", 11);
+            eb_gap_adv_set_data(EB_GAP_ADV_SET_SCAN_RSP, (uint8_t*)"\x02\x09\x5F", 3);
             eb_gap_adv_set_param(0x30, 0x40, EB_GAP_ADV_IND, EB_ADV_ADDR_TYPE_RANDOM, 0, NULL, 0x07, EB_ADV_FILTER_DEFAULT);
-            usleep(5000);
             bdaddr_t bdaddr = {0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6};
             eb_gap_set_random_address(bdaddr);
-            usleep(5000);
             eb_gap_adv_enable(true);
 #else
             conn_flag = false;
             bdaddr_t bdaddr = {(rand()&0x7F)|0x40, rand()%0xFF, rand()%0xFF, rand()%0xFF, rand()%0xFF, rand()%0xFF};
             eb_gap_set_random_address(bdaddr);
-            usleep(5000);
             eb_gap_set_scan_param(0, 0x10, 0x10, 1, 0);
             eb_gap_scan_enable(true, 1);
 #endif
@@ -107,7 +100,6 @@ void ble_event_cb(eb_event_t *param)
                 for(int i=5;i>0;i--) printf("%02X:", param->gap.adv_report.addr[i]);
                 printf("%02X %d\n", param->gap.adv_report.addr[0], param->gap.adv_report.rssi);
                 eb_gap_scan_enable(false, 1);
-                usleep(50000);
                 uint8_t cmd[] = {
                     0x01, 0x0D, 0x20, 0x19, 0x30, 0x00, 0x30, 0x00, 0x00,
                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x01,

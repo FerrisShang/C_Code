@@ -237,13 +237,15 @@ static uint32_t get_crc_by_offset(uint8_t type, uint32_t offset)
 // return 1->success, 0->failed, -1->ignore
 static int check_crc(uint32_t offset, uint32_t crc)
 {
-    dfu_log("Check CRC(type:%d), O:%d<==>%d,C:0x%08X<==>0x%08X\n",
-            dfu.cur_type,
-            dfu.cur_type==DFU_PKG_TYPE_CMD?dfu.cmd_offset:dfu.data_offset,
-            offset,
-            dfu.cur_type==DFU_PKG_TYPE_CMD?dfu.cmd_crc:dfu.data_crc,
-            crc
-            );
+    if((dfu.cur_type==DFU_PKG_TYPE_CMD?dfu.cmd_crc:dfu.data_crc) != crc){
+        dfu_log("Check CRC(type:%d), O:%d<==>%d,C:0x%08X<==>0x%08X\n",
+                dfu.cur_type,
+                dfu.cur_type==DFU_PKG_TYPE_CMD?dfu.cmd_offset:dfu.data_offset,
+                offset,
+                dfu.cur_type==DFU_PKG_TYPE_CMD?dfu.cmd_crc:dfu.data_crc,
+                crc
+               );
+    }
     if(dfu.cur_type == DFU_PKG_TYPE_CMD){
         if(offset < dfu.cmd_offset){ return -1; }
         return offset == dfu.cmd_offset && crc == dfu.cmd_crc;
