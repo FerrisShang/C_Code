@@ -33,12 +33,18 @@ FILE *create_btsnoop_rec(const char *path)
 	char version[] = {0x00,0x00,0x00,0x01};
 	uint8_t type[] = {0x00,0x00,0x03,0xEA};
 	FILE *fp = NULL;
-	fp=fopen(path, "wb");
+	fp=fopen(path, "rb");
+	if(fp == NULL){
+        fp=fopen(path, "wb");
+        fwrite(id, 8, 1, fp);
+        fwrite(version, 4, 1, fp);
+        fwrite(type, 4, 1, fp);
+    }else{
+        fclose(fp);
+        fp=fopen(path, "ab");
+    }
 	if(fp == NULL)
 		return NULL;
-	fwrite(id, 8, 1, fp);
-	fwrite(version, 4, 1, fp);
-	fwrite(type, 4, 1, fp);
 	return fp;
 }
 
@@ -57,6 +63,10 @@ void record_btsnoop(FILE *fp, uint8_t *hci_data, int data_len, char data_dir)
 	char flag[4] = {0,0,0,0};
 	if(fp == NULL || hci_data == NULL)
 		return;
+    if((data_len > 4 && hci_data[0] == 0x04 && hci_data[1] == 0x3e && hci_data[3] == 0x02) ||
+            hci_data[0] == 0x02 || (hci_data[0] == 0x04 && hci_data[1] == 0x13)){
+		return;
+    }
 	bswap(tLen);
 	fwrite(&tLen, 4, 1, fp);
 	fwrite(&tLen, 4, 1, fp);

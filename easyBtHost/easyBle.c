@@ -31,6 +31,8 @@ void eb_init(void(*ble_event_cb)(eb_event_t *))
     eb_smp_init();
     eb_hci_init();
     // Init hci interface
+    hci_buf_clear();
+    usb_hci_deinit();
     usb_hci_init(USB_LOG_BTSNOOP, eb_h4_recv);
     eb_h4_send((uint8_t*)"\x01\x03\x0C\x00", 4);
     usleep(1000);
@@ -69,6 +71,7 @@ void eb_set_timer(uint8_t id, uint32_t tout_ms, bool(*cb)(uint8_t id, void*p), v
 {
     assert(id < EB_TIMER_NUM);
     assert(cb);
+    assert(tout_ms < 0x7FFFFFFF);
     timer_rec[id].enabled = true;
     struct timeval tv;
     gettimeofday(&tv, NULL);

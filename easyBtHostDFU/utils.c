@@ -135,7 +135,6 @@ void dump_hex(uint8_t *data, int len)
 char* hex_to_str(char* buf, uint8_t *data, int len)
 {
     char *ret = buf;
-    int i;
     while(len--){
         *buf = (*data>>4)>9 ? (*data>>4)-10+'A' : (*data>>4)+'0'; buf++;
         *buf = (*data&15)>9 ? (*data&15)-10+'A' : (*data&15)+'0'; buf++;
@@ -143,5 +142,21 @@ char* hex_to_str(char* buf, uint8_t *data, int len)
     }
     *buf = 0;
     return ret;
+}
+
+uint8_t* hexhex(uint8_t *hex, int hex_len, uint8_t *sub_hex, int sub_len)
+{
+    int i, j, found;
+    for(i=0;i<=hex_len-sub_len && sub_len;i++){
+        found = 1;
+        for(j=0;j<sub_len;j++){
+            if(hex[i+j] != sub_hex[j]){
+                found = 0;
+                break;
+            }
+        }
+        if(found){ return &hex[i]; }
+    }
+    return NULL;
 }
 

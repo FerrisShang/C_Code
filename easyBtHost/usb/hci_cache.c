@@ -14,6 +14,12 @@ void hci_buf_in(uint8_t *data, uint32_t len)
 {
     pthread_mutex_lock(&lock);
     assert(len <= BUF_SIZE-sizeof(uint32_t));
+    if(((ra-fr)&(BUF_NUM-1)) > BUF_NUM-16){
+        if(data[0]==0x04&&data[1]==0x3E&&data[3]==0x02){ // Adv Report
+            pthread_mutex_unlock(&lock);
+            return;
+        };
+    }
     ra=(ra+1)&(BUF_NUM-1);
     assert(fr != ra); // full
     void *p = hci_buf[ra];
@@ -49,4 +55,10 @@ int hci_buf_is_full(void)
     uint32_t res = (fr==((ra+1)&(BUF_NUM-1)));
     pthread_mutex_unlock(&lock);
     return res;
+}
+void hci_buf_clear(void)
+{
+    pthread_mutex_lock(&lock);
+    fr = ra = 0;
+    pthread_mutex_unlock(&lock);
 }

@@ -14,6 +14,7 @@ enum{
     EB_EVT_GAP_ADV_REPORT,
     EB_EVT_GAP_TX_COMPLETE,
     EB_EVT_GAP_MTU_UPDATE,
+    EB_EVT_GAP_HARDWARE_ERR,
 };
 
 typedef enum {

@@ -121,7 +121,11 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     eb_event(&evt);
                     break;}
                 case 0x3E:{ // LE Meta Event
-                    assert(len == 3+data[2]);
+                    if(len != 3+data[2]){
+                        eb_event_t evt = { EB_EVT_GAP_HARDWARE_ERR };
+                        eb_event(&evt);
+                        break;
+                    }
                     //uint8_t len = data[2];
                     uint8_t sub_event = data[3];
                     switch(sub_event){
@@ -193,8 +197,13 @@ void eb_hci_handler(uint8_t *data, uint16_t len)
                     eb_smp_disconnected_handler(evt.gap.connected.handle, evt.gap.connected.peer_addr, data[8]);
                     eb_event(&evt);
                     break;}
+                case 0x10:{ // Hardware error
+                    eb_event_t evt = { EB_EVT_GAP_HARDWARE_ERR };
+                    eb_event(&evt);
+                    break;}
                 default : // Unsupport event
-                    assert(0);
+                    //assert(0);
+                    break;
             }
             break;}
         default:

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
+#include "utils.h"
 #include "batch_parse.h"
 #include "log.h"
 
@@ -11,7 +13,7 @@ static dfu_items_t items_list;
 static dfu_items_t items_success;
 static char line_str[MAX_STR_SIZE];
 
-static char* copy_hex(char* dst, char* src, int* max_len)
+static char* copy_hex(uint8_t* dst, char* src, int* max_len)
 {
     int len = 0, flag = 0;
     if (!src) return src;
@@ -78,7 +80,7 @@ static dfu_items_t* batch_parse(dfu_items_t* items, char* filename)
             log("Unexcepted data detected.(line:%d)\n", line_num);
             continue;
         }
-        l = 6; p = copy_hex(item_add->old_addr, p, &l);
+        l = 7; p = copy_hex(item_add->old_addr, p, &l);
         if (!p) {
             log("Unexcepted data detected.(line:%d)\n", line_num);
             continue;
@@ -88,7 +90,7 @@ static dfu_items_t* batch_parse(dfu_items_t* items, char* filename)
             log("Unexcepted data detected.(line:%d)\n", line_num);
             continue;
         }
-        l = 6; p = copy_hex(item_add->new_addr, p, &l);
+        l = 7; p = copy_hex(item_add->new_addr, p, &l);
         if (!p) {
             log("Unexcepted data detected.(line:%d)\n", line_num);
             continue;
@@ -103,8 +105,15 @@ static dfu_items_t* batch_parse(dfu_items_t* items, char* filename)
             log("Unexcepted data detected.(line:%d)\n", line_num);
             continue;
         }
+        l = 1; p = copy_hex(&item_add->repeat, p, &l);
+        if (!p) {
+            log("Unexcepted data detected.(line:%d)\n", line_num);
+            continue;
+        }
+        item_add->is_valid = 1;
         items->items[items->num] = item_add;
         items->num++;
+        assert(items->num < MAX_ITEMS_NUM);
         item_add = calloc_dfu_item();
     }
     fclose(fp);
@@ -117,17 +126,47 @@ dfu_items_t* batch_parse_list(char* filename)
     return batch_parse(&items_list, filename);
 }
 
-dfu_items_t* batch_parse_success(void)
+dfu_items_t* batch_parse_success(dfu_items_t *item_list)
 {
-    return batch_parse(&items_success, SUC_FILENAME);
+    batch_parse(&items_success, SUC_FILENAME);
+    if(item_list){
+        int i, j;
+        for(i=0;i<item_list->num;i++){
+            if(item_list->items[i]->repeat){
+                continue;
+            }
+            for(j=0;j<items_success.num;j++){
+                if(!strcmp(item_list->items[i]->key, items_success.items[j]->key)){
+                    item_list->items[i]->is_valid = 0;
+                    break;
+                }
+            }
+        }
+    }
+    return &items_success;
 }
 
-dfu_items_t* batch_suc_add(dfu_item_t* item)
+dfu_items_t* batch_suc_add(dfu_item_t* item, int update_file)
 {
-    printf("Add %d\n", 0);
     dfu_item_t* add = calloc_dfu_item();
     *add = *item;
     items_success.items[items_success.num++] = add;
+    if(update_file){
+        char buf[1024];
+        char str_buf[4][128];
+        FILE* fp = fopen(SUC_FILENAME, "a");
+        int i = items_success.num - 1;
+        sprintf(buf, "%s,%s,%s,%s,%s,%s,%d\n",
+                items_success.items[i]->key,
+                hex_to_str(str_buf[0], items_success.items[i]->old_addr, 7),
+                hex_to_str(str_buf[1], items_success.items[i]->old_adv_data, items_success.items[i]->old_adv_len),
+                hex_to_str(str_buf[2], items_success.items[i]->new_addr, 7),
+                hex_to_str(str_buf[3], items_success.items[i]->new_adv_data, items_success.items[i]->new_adv_len),
+                items_success.items[i]->filename,
+                items_success.items[i]->repeat);
+        fputs(buf, fp);
+        fclose(fp);
+    }
     return &items_success;
 }
 
@@ -138,13 +177,14 @@ dfu_items_t* batch_suc_save(void)
     char str_buf[4][128];
     FILE* fp = fopen(SUC_FILENAME, "w");
     for (i = 0; i < items_success.num; i++) {
-        sprintf(buf, "%s,%s,%s,%s,%s,%s\n",
+        sprintf(buf, "%s,%s,%s,%s,%s,%s,%d\n",
                 items_success.items[i]->key,
-                hex_to_str(str_buf[0], items_success.items[i]->old_addr, 6),
+                hex_to_str(str_buf[0], items_success.items[i]->old_addr, 7),
                 hex_to_str(str_buf[1], items_success.items[i]->old_adv_data, items_success.items[i]->old_adv_len),
-                hex_to_str(str_buf[2], items_success.items[i]->new_addr, 6),
+                hex_to_str(str_buf[2], items_success.items[i]->new_addr, 7),
                 hex_to_str(str_buf[3], items_success.items[i]->new_adv_data, items_success.items[i]->new_adv_len),
-                items_success.items[i]->filename);
+                items_success.items[i]->filename,
+                items_success.items[i]->repeat);
         fputs(buf, fp);
     }
     fclose(fp);

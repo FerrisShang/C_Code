@@ -9,7 +9,7 @@
 #include "btsnoop_rec.h"
 
 #define dump(d, l) do{int i;for(i=0;i<l;i++)printf("%02X ", (unsigned char)d[i]);printf("\n");fflush(stdout);}while(0)
-#define TRAN_TOUT (2000)
+#define TRAN_TOUT (500)
 #define LOG_IN    (1)
 #define LOG_OUT   (0)
 
@@ -18,6 +18,7 @@ static FILE* bt_snoop;
 static void (*_recv_cb)(uint8_t* data, int len);
 static pthread_mutex_t log_lock, callback_lock;
 static USB_DEV_T* usb_dev = NULL;
+static pthread_t th1, th2;
 
 static void log_data(uint8_t* data, int len, int dir)
 {
@@ -41,15 +42,20 @@ static void* hci_read_th(void* p)
     uint8_t buf[1024];
     while (1) {
         int res = usb_hci_recv(buf, 1024, ep);
-        if (res > 0 && !_exit_flag) {
+        if(_exit_flag){
+            break;
+        }
+        if (res > 0){
             pthread_mutex_lock(&callback_lock);
             _recv_cb(buf, res);
             pthread_mutex_unlock(&callback_lock);
+        } else if(res == -EIO){
+            pthread_mutex_lock(&callback_lock);
+            if(!_exit_flag){ _recv_cb((uint8_t*)"\x04\x10\x00\x00", 4); }
+            _exit_flag = true;
+            pthread_mutex_unlock(&callback_lock);
+            break;
         } else {
-            if (_exit_flag) {
-                _exit_flag = false;
-                break;
-            }
             usleep(1000);
         }
     }
@@ -218,6 +224,7 @@ int usb_hci_recv(uint8_t* data, int len, int endpoint)
 
 USB_DEV_T* usb_hci_init(int log_flag, void (*recv_cb)(uint8_t* data, int len))
 {
+    _exit_flag = false;
     USB_DEV_T* ret = get_usb_dev();
     _log_flag = log_flag;
     _recv_cb = recv_cb;
@@ -227,10 +234,9 @@ USB_DEV_T* usb_hci_init(int log_flag, void (*recv_cb)(uint8_t* data, int len))
         bt_snoop = create_btsnoop_rec(BT_SNOOP_PATH);
     }
     if (_recv_cb) {
-        pthread_t th;
         static int th1_ep = (USB_EP_EVT_IN), th2_ep = (USB_EP_ACL_IN);
-        pthread_create(&th, 0, hci_read_th, &th1_ep);
-        pthread_create(&th, 0, hci_read_th, &th2_ep);
+        pthread_create(&th1, 0, hci_read_th, &th1_ep);
+        pthread_create(&th2, 0, hci_read_th, &th2_ep);
     }
     return ret;
 }
@@ -238,13 +244,20 @@ USB_DEV_T* usb_hci_init(int log_flag, void (*recv_cb)(uint8_t* data, int len))
 void usb_hci_deinit()
 {
     _exit_flag = true;
-    usleep(5000);
+    pthread_join(th1, NULL);
+    pthread_join(th2, NULL);
+    if(!usb_dev){
+        return;
+    }
 #ifdef __linux__
     libusb_reset_device(usb_dev);
     libusb_close(usb_dev);
 #else
-    usb_reset(usb_dev);
+    //usb_reset(usb_dev);
     usb_close(usb_dev);
 #endif
+    bt_snoop = NULL;
+    usb_dev = NULL;
+    usleep(500000);
 }
 

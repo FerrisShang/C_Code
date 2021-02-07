@@ -38,6 +38,8 @@ void dfu_client_start(uint16_t mtu, uint8_t pkg_max_num, uint8_t prn);
 void dfu_client_abort(void);
 void dfu_client_gatt_recv(uint8_t *data, uint32_t length);
 void dfu_client_can_send(uint8_t pkg_num);
+
+// PORT
 void dfu_client_evt_cb(uint8_t evt, void* param);
 void dfu_client_get_info_cb(uint8_t pkg_type, uint32_t *length);
 void dfu_client_get_data_cb(uint8_t pkg_type, uint32_t offset, uint32_t *max_len, uint8_t *data);

@@ -9,13 +9,13 @@
 #include "dfu_client.h"
 
 #define DEV_SHOW_NUM 5
-uint16_t conn_handle;
-uint16_t dfu_base_hdl;
-size_t m_config_size, m_image_size;
-char* m_buf_config, *m_buf_image;
+static uint16_t conn_handle;
+static uint16_t dfu_base_hdl;
+static size_t m_config_size, m_image_size;
+static char* m_buf_config, *m_buf_image;
 
-uint8_t m_scan_state;
-uint32_t m_scan_timestamp;
+static uint8_t m_scan_state;
+static uint32_t m_scan_timestamp;
 typedef struct {
     uint8_t adv_type;
     uint8_t addr[6];
@@ -27,15 +27,14 @@ typedef struct {
     int8_t  rssi;
 } dev_report_t;
 #define DEV_REP_MAX_NUM 16
-dev_report_t dev_report[DEV_REP_MAX_NUM];
-dev_report_t* p_dev_report[DEV_REP_MAX_NUM];
-uint8_t dev_num = 0;
+static dev_report_t dev_report[DEV_REP_MAX_NUM];
+static dev_report_t* p_dev_report[DEV_REP_MAX_NUM];
+static uint8_t dev_num = 0;
 
-bool timeout_handler(uint8_t id, void* p);
-int get_num(int val_def);
-void start_scan(bool enable);
+static bool timeout_handler(uint8_t id, void* p);
+static void start_scan(bool enable);
 
-bool show_menu_flag;
+static bool show_menu_flag;
 void show_menu(void)
 {
     if (!show_menu_flag) {
@@ -119,7 +118,7 @@ void dump_dev_discovered(void)
     }
 }
 
-bool timeout_handler(uint8_t id, void* p)
+static bool timeout_handler(uint8_t id, void* p)
 {
     switch (id) {
         case 0: // scan timeout
@@ -151,7 +150,7 @@ void start_scan(bool enable)
         eb_gap_scan_enable(false, 0);
     }
 }
-void ble_event_cb(eb_event_t* param)
+static void ble_event_cb(eb_event_t* param)
 {
     //printf("Evt_ID:0x%04X\n", param->evt_id);
     switch (param->evt_id) {
@@ -169,7 +168,7 @@ void ble_event_cb(eb_event_t* param)
             if (param->gap.connected.status == 0) {
                 printf(" Connected.\n");
                 conn_handle = param->gap.connected.handle;
-                eb_gattc_mtu_req(conn_handle, 200);
+                eb_gattc_mtu_req(conn_handle, 500);
             } else {
                 printf(" Connected failed: 0x%02X\n", param->gap.connected.status);
             }
@@ -330,12 +329,12 @@ void dfu_single(char *filename)
     }
 }
 
-void dfu_client_get_info_cb(uint8_t pkg_type, uint32_t* length)
+void dfu_client_get_info_cb_single(uint8_t pkg_type, uint32_t* length)
 {
     if (pkg_type == DFU_PKG_TYPE_CMD) *length = m_config_size;
     else *length = m_image_size;
 }
-void dfu_client_get_data_cb(uint8_t pkg_type, uint32_t offset, uint32_t* max_len, uint8_t* data)
+void dfu_client_get_data_cb_single(uint8_t pkg_type, uint32_t offset, uint32_t* max_len, uint8_t* data)
 {
     if (pkg_type == DFU_PKG_TYPE_CMD) {
         memcpy(data, m_buf_config + offset, *max_len);
@@ -343,7 +342,7 @@ void dfu_client_get_data_cb(uint8_t pkg_type, uint32_t offset, uint32_t* max_len
         memcpy(data, m_buf_image + offset, *max_len);
     }
 }
-void dfu_client_gatt_send_cb(uint8_t gatt_type, uint8_t* data, uint32_t length)
+void dfu_client_gatt_send_cb_single(uint8_t gatt_type, uint8_t* data, uint32_t length)
 {
     if (gatt_type == DFU_GATT_TYPE_CTRL) {
         eb_gattc_write(conn_handle, dfu_base_hdl + 2, data, length);
@@ -366,13 +365,13 @@ static char* get_finish_str(uint8_t res)
     if(res == DFU_CRC_NOT_MATCH)          { return "DFU_CRC_NOT_MATCH"; }
     return NULL;
 }
-void dfu_client_evt_cb(uint8_t evt, void* param)
+void dfu_client_evt_cb_single(uint8_t evt, void* param)
 {
     static int start_time, dfu_size;
     if (evt == DFU_EVT_PROG) {
         static int prog_pct;
         uint32_t offset = *((uint32_t*)param), size = *((uint32_t*)param + 1);
-        int cur_pct = (offset * 10 / size) * 10;
+        int cur_pct = (offset * 100 / size) * 1;
         if (prog_pct != cur_pct) {
             prog_pct = cur_pct;
             dfu_log("\rdfu prog: %3d%%   ", prog_pct);

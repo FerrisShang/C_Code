@@ -11,12 +11,6 @@ struct eb_l2cap_env{
 static struct eb_l2cap_env l2cap_env;
 
 
-void eb_l2cap_init(void)
-{
-    l2cap_env.host_pkt_num = 0;
-    l2cap_env.ctrl_pkt_num = 0;
-}
-
 void eb_l2cap_update_conn_param(uint16_t conn_hd,
         uint16_t intv_min, uint16_t intv_max, uint16_t latency, uint16_t timeout)
 {
@@ -61,7 +55,7 @@ void l2cap_packet_comp(int num)
 }
 
 /*** l2cap fifo ***/
-#define L2CAP_BUFFER_SIZE (2048*10)
+#define L2CAP_BUFFER_SIZE (2048*16)
 typedef uint16_t l2cap_size_t;
 static uint8_t l2cap_buffer[L2CAP_BUFFER_SIZE];
 static l2cap_size_t fr, ra;
@@ -146,4 +140,12 @@ void eb_l2cap_send(uint8_t *data, uint32_t len)
     l2cap_packet_inc();
     l2cap_buffer_send();
 }
+
+void eb_l2cap_init(void)
+{
+    l2cap_env.host_pkt_num = 0;
+    l2cap_env.ctrl_pkt_num = 0;
+    L2CAP_FIFO_CLEAR();
+}
+
 

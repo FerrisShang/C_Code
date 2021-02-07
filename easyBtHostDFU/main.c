@@ -82,9 +82,53 @@ int main (int argc, char** argv)
         dfu_single(arguments.filename);
     } else if (arguments.main_function == ARG_FUNC_BATCH) {
         extern void dfu_batch(char* filename, int scan_time, int is_check);
-        //dfu_batch(arguments.filename, arguments.scan_time, arguments.is_check);
+        dfu_batch(arguments.filename, arguments.scan_time, arguments.is_check);
     } else {
         assert(0);
     }
     exit (0);
 }
+
+void dfu_client_evt_cb_single(uint8_t evt, void* param);
+void dfu_client_evt_cb_batch(uint8_t evt, void* param);
+void dfu_client_evt_cb(uint8_t evt, void* param)
+{
+    if(arguments.main_function == ARG_FUNC_SINGLE){
+        dfu_client_evt_cb_single(evt, param);
+    }else{
+        dfu_client_evt_cb_batch(evt, param);
+    }
+}
+
+void dfu_client_get_info_cb_single(uint8_t pkg_type, uint32_t* length);
+void dfu_client_get_data_cb_single(uint8_t pkg_type, uint32_t offset, uint32_t* max_len, uint8_t* data);
+void dfu_client_gatt_send_cb_single(uint8_t gatt_type, uint8_t* data, uint32_t length);
+void dfu_client_get_info_cb_batch(uint8_t pkg_type, uint32_t* length);
+void dfu_client_get_data_cb_batch(uint8_t pkg_type, uint32_t offset, uint32_t* max_len, uint8_t* data);
+void dfu_client_gatt_send_cb_batch(uint8_t gatt_type, uint8_t* data, uint32_t length);
+
+void dfu_client_get_info_cb(uint8_t pkg_type, uint32_t* length)
+{
+    if(arguments.main_function == ARG_FUNC_SINGLE){
+        dfu_client_get_info_cb_single(pkg_type, length);
+    }else{
+        dfu_client_get_info_cb_batch(pkg_type, length);
+    }
+}
+void dfu_client_get_data_cb(uint8_t pkg_type, uint32_t offset, uint32_t* max_len, uint8_t* data)
+{
+    if(arguments.main_function == ARG_FUNC_SINGLE){
+        dfu_client_get_data_cb_single(pkg_type, offset, max_len, data);
+    }else{
+        dfu_client_get_data_cb_batch(pkg_type, offset, max_len, data);
+    }
+}
+void dfu_client_gatt_send_cb(uint8_t gatt_type, uint8_t* data, uint32_t length)
+{
+    if(arguments.main_function == ARG_FUNC_SINGLE){
+        dfu_client_gatt_send_cb_single(gatt_type, data, length);
+    }else{
+        dfu_client_gatt_send_cb_batch(gatt_type, data, length);
+    }
+}
+

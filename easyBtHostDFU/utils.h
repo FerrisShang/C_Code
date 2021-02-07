@@ -12,5 +12,6 @@ char* get_file_dir(char* filepath);
 void chdir_to_file(char* filepath);
 void dump_hex(uint8_t *data, int len);
 char* hex_to_str(char* buf, uint8_t *data, int len);
+uint8_t* hexhex(uint8_t *hex, int hex_len, uint8_t *sub_hex, int sub_len);
 
 #endif /* __UTILS_H__ */
