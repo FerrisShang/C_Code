@@ -19,7 +19,7 @@ char* getTimeStr(char* buf)
 	sprintf(buf, "%s.%03d", buf, tv.tv_usec / 1000);
 	return buf;
 }
-
+#if 0
 void parseUdp(void* p, int udpPort)
 {
 	vector<uint8_t> old_data, new_data;
@@ -55,6 +55,7 @@ void parseUdp(void* p, int udpPort)
     }
     //closesocket(socketS);
 }
+#endif
 static string GetClipboardText()
 {
   if (!OpenClipboard(nullptr)){ return string(""); }
@@ -94,7 +95,7 @@ int main(int argc, char *argv[])
 	if(argc == 1){ th_clipboard.join(); return 0; }
 	thread th_udp[argc-1];
 	for(int i=0;i<argc-1;i++){
-		th_udp[i] = thread(parseUdp, &p, atoi(argv[i+1]));
+		//th_udp[i] = thread(parseUdp, &p, atoi(argv[i+1]));
 	}
 	th_clipboard.join();
 }

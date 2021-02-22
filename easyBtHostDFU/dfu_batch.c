@@ -308,7 +308,9 @@ void dfu_client_evt_cb_batch(uint8_t evt, void* param)
             log("flash success: %d\n", flash_cnt);
         }else{
         }
-        eb_set_timer(TOUT_ID_DISC, 2000, timeout_handler, NULL);
+        if (conn_handle != INVALID_CONN_HDL) {
+            eb_set_timer(TOUT_ID_DISC, 2000, timeout_handler, NULL);
+        }
     }
 }
 
