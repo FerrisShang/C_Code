@@ -26,7 +26,7 @@ class CScriptParse {
 	int mode;
 	int debug_flag;
 	string title;
-	mutex *mtx;
+	mutex *mtx, *mtx_val;
 	uint32_t pending_flag;
 	uint32_t pending_num;
 	map<const string, sc_cmd_value_t> variable_pool;
@@ -39,7 +39,7 @@ class CScriptParse {
 	CFileList files;
 	bool finished;
 	public:
-	CScriptParse(char *file_name, const char*title=NULL, mutex *mtx=NULL){
+	CScriptParse(char *file_name, const char*title=NULL, mutex *mtx=NULL, mutex *mtx_val=NULL){
 		parse_file(cmd_lines, file_name);
 		current_pos = 0;
 		timeout = 3000;
@@ -49,6 +49,7 @@ class CScriptParse {
 		pending_flag = 0;
 		if(title) this->title = string(title) + string(": ");
 		this->mtx = mtx;
+		this->mtx_val = mtx_val;
 		finished = false;
 		files = CFileList();
 	}
@@ -291,7 +292,7 @@ class CScriptParse {
 						case SC_VT_DEF:
 							if(!variable_pool.count(val.name)){
 								sc_cmd_value_t new_val = { SC_VT_HEX };
-								new_val.name = (char*)calloc(1, val.name_len);
+								new_val.name = (char*)calloc(1, val.name_len+1);
 								memcpy(new_val.name, val.name, val.name_len);
 								variable_pool[val.name] = new_val;
 							}
@@ -360,6 +361,17 @@ class CScriptParse {
 			}
 		}
 		fclose(fp);
+	}
+	sc_cmd_value_t get_val(const string &name){
+		mtx_val->lock();
+		auto ret = variable_pool[name];
+		mtx_val->unlock();
+		return ret;
+	}
+	void update_variable(sc_cmd_value_t& value){
+		mtx_val->lock();
+		variable_pool[value.name] = value;
+		mtx_val->unlock();
 	}
 };
 #endif /* __SCRIPT_PARSE_H__ */
