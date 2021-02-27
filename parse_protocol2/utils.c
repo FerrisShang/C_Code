@@ -53,3 +53,43 @@ char* __strdup (const char* s)
 }
 #endif /* __STRDUP__ */
 
+bool is_valid_num(char* s)
+{
+    if (strlen(s) > 2 && s[0] == '0' && (s[1] & 0xDF) == 'X') {
+        char* p = s + 2;
+        while (*p) {
+            if (!isxdigit(*p++)) {
+                return false;
+            }
+        }
+    } else {
+        if (*s == '-')s++;
+        while (*s) {
+            if (!isdigit(*s++)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+uint32_t str2u32(char* s)
+{
+    if (strlen(s) > 2 && s[0] == '0' && (s[1] & 0xDF) == 'X') {
+        char* p = &s[2];
+        uint32_t res = 0;
+        while (*p) {
+            res <<= 4;
+            if (*p > '9') {
+                res += (*p & 0xDF) - 'A' + 10;
+            } else {
+                res += *p - '0';
+            }
+            p++;
+        }
+        return res;
+    } else {
+        return atoi(s);
+    }
+}
+

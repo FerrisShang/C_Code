@@ -15,6 +15,7 @@ struct csv_line {
 };
 
 struct csv_data {
+    char filename[32];
     int line_num;
     struct csv_line* lines;
 };
@@ -25,7 +26,7 @@ enum {
 };
 
 int csv_read(char* filename, struct csv_data* data);
-void csv_dump(void);
+void csv_dump(struct csv_data* data);
 
 
 #endif /* __CSV_READ_H__ */

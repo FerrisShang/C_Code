@@ -31,10 +31,12 @@ enum {
     BTYPE_T_1_25MS,
     BTYPE_T_10MS,
     BTYPE_MAX,
+    BTYPE_INVALID = -1,
 };
 
-int output(int basic_type, uint8_t* data, int len, char* out_str, int* out_len);
+int output(int basic_type, uint8_t* data, int len, char*** out_str, int* out_len);
 bool is_basic_type(char* str);
 const char* type_str(int basic_type);
+int type_idx(const char* type);
 
 #endif /* __BASIC_TYPE_H__ */

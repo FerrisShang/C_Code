@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "csv_read.h"
 #include "utils.h"
 
@@ -9,18 +10,18 @@
 #define csv_free(p) free(p)
 #define csv_debug printf
 
-static struct csv_data m_data;
-
 int csv_read(char* filename, struct csv_data* data)
 {
+    struct csv_data m_data = {0};
     FILE* fp;
     char line_buf[LINE_MAX];
     fp = fopen(filename, "r");
     if (!fp) {
         return CSV_FILE_NOT_FOUND;
     }
-    *data = m_data;
     m_data.line_num = 0;
+    assert(strlen(filename) < 32);
+    strcpy(m_data.filename, filename);
     // malloc csv buffer
     int n = 0;
     while (!feof(fp)) {
@@ -38,6 +39,9 @@ int csv_read(char* filename, struct csv_data* data)
         char* p = strip(line_buf, NULL);
         struct csv_line* lines = &m_data.lines[m_data.line_num];
         lines->col_num = 0;
+        if(strlen(p) == 0){
+            continue;
+        }
 
         // malloc lines buffer
         if (lines->cells) {
@@ -65,14 +69,15 @@ int csv_read(char* filename, struct csv_data* data)
             m_data.line_num++;
         }
     }
+    *data = m_data;
     return CSV_SUCCESS;
 }
 
-void csv_dump(void)
+void csv_dump(struct csv_data* data)
 {
     int i, j;
-    for (i = 0; i < m_data.line_num; i++) {
-        struct csv_line* lines = &m_data.lines[i];
+    for (i = 0; i < data->line_num; i++) {
+        struct csv_line* lines = &data->lines[i];
         for (j = 0; j < lines->col_num; j++) {
             struct csv_cell* cell = &lines->cells[j];
             csv_debug("%s(%c%d)\t", cell->text, cell->x + 'A', cell->y + 1);

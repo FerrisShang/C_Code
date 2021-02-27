@@ -31,11 +31,12 @@ bool is_basic_type(char* str)
     return false;
 }
 
-int output(int basic_type, uint8_t* data, int len, char* out_str, int* out_len)
+int output(int basic_type, uint8_t* data, int len, char*** out_str, int* out_len)
 {
     if (basic_type >= BTYPE_MAX) {
         return BTYPE_TRUNCATED;
     }
+    // TODO: output should support all types
     return BTYPE_SUCCESS;
 }
 
@@ -45,4 +46,15 @@ const char* type_str(int basic_type)
         return NULL;
     }
     return m_type_map[basic_type].str;
+}
+
+int type_idx(const char *type)
+{
+    int i;
+    for (i = 0; i < sizeof(m_type_map) / sizeof(m_type_map[0]); i++) {
+        if (!strcmp(m_type_map[i].str, type)) {
+            return i;
+        }
+    }
+    return -1;
 }
