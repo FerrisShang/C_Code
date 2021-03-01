@@ -63,7 +63,7 @@ struct param {
     char* pos; // param position
 };
 
-struct param* param_add(char* name, int bit_offset, int bit_width, int bit_length, char *width_name, int basic_type,
+struct param* param_add(char* name, int bit_offset, int bit_width, int bit_length, char* width_name, int basic_type,
                         char* key_str, char* range_str, char* default_str, char* output, char* description,
                         int cfg_flag, char* pos);
 

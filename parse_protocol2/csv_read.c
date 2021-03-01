@@ -39,7 +39,7 @@ int csv_read(char* filename, struct csv_data* data)
         char* p = strip(line_buf, NULL);
         struct csv_line* lines = &m_data.lines[m_data.line_num];
         lines->col_num = 0;
-        if(strlen(p) == 0){
+        if (strlen(p) == 0) {
             continue;
         }
 

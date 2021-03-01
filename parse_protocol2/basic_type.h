@@ -16,7 +16,7 @@
 
 enum {
     BTYPE_SUCCESS,
-    BTYPE_TRUNCATED,
+    BTYPE_FAILED,
 };
 
 enum {
@@ -31,10 +31,13 @@ enum {
     BTYPE_T_1_25MS,
     BTYPE_T_10MS,
     BTYPE_MAX,
+    BTYPE_TRUNCATED = BTYPE_MAX,
     BTYPE_INVALID = -1,
 };
 
-int output(int basic_type, uint8_t* data, int len, char*** out_str, int* out_len);
+int output_get(int basic_type, uint8_t* data, int bit_len, char*** pp_out, int* out_num,
+               char* (*enum_str_cb)(int key, void* p), void* enum_p);
+void output_free(char** pp_out, int out_num);
 bool is_basic_type(char* str);
 const char* type_str(int basic_type);
 int type_idx(const char* type);

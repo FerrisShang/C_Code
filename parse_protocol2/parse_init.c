@@ -21,14 +21,12 @@ static char* error_msg;
         if(warning_num < MAX_WARNING_NUM){ \
             char buf[1024] = {0}; \
             snprintf(buf, 1000, __VA_ARGS__); \
-            puts(buf); \
             warning_list[warning_num++] = strdup(buf); \
         } \
     }
 #define ERROR_MSG(...) { \
         char buf[1024] = {0}; \
         snprintf(buf, 1000, __VA_ARGS__); \
-        puts(buf); \
         error_msg = strdup(buf); \
     }
 
@@ -118,7 +116,7 @@ static void init_param(struct csv_data* csv_p)
                 assert(param_alias(cell_type->text, cell_name->text, cell_pos) == POOL_PARAM_SUCCESS);
             } else {
                 int bit_offset, bit_width, bit_length;
-                char *width_str = NULL;
+                char* width_str = NULL;
                 if (strstr(cell_width->text, "/")) {
                     char* str = strdup(cell_width->text), *oo = str, *ww = NULL, *ll = NULL;
                     int i;
@@ -142,6 +140,10 @@ static void init_param(struct csv_data* csv_p)
                 } else {
                     bit_offset = bit_width = bit_length = 0;
                     width_str = cell_width->text;
+                }
+                if (bit_width != bit_length && bit_width > sizeof(uint32_t) * 8) {
+                    ERROR_MSG("Width of the values in type '%s' must NOT lager than 32 bits @ %s", cell_type->text, cell_pos);
+                    return;
                 }
                 cur_param = param_add(cell_name->text, bit_offset, bit_width, bit_length, width_str, basic_type,
                                       cell_key->text, cell_value->text, cell_def->text, cell_output->text, "",
@@ -271,13 +273,15 @@ static void auto_define(void)
 static int validation_params(void* p, void* data)
 {
     struct param* param = (struct param*)data;
-    if (param->basic_type == BTYPE_ENUM) {
+    if (param->basic_type == BTYPE_ENUM || param->basic_type == BTYPE_UNSIGNED ||
+            param->basic_type == BTYPE_SIGNED || param->basic_type == BTYPE_T_0_625MS ||
+            param->basic_type == BTYPE_T_1_25MS || param->basic_type == BTYPE_T_10MS) {
         if (param->bit_width > 32) {
-            ERROR_MSG("Param '%s' type is emub/bitmap, bit_width musb less than 32 @ %s", param->name, param->pos);
+            ERROR_MSG("Param '%s' bit_width must less than 32 @ %s", param->name, param->pos);
             return !POOL_PARAM_SUCCESS;
         }
-    } else if (param->basic_type == BTYPE_BITMAP) {
-    } else { // all other types
+    }
+    if (param->basic_type != BTYPE_ENUM && param->basic_type != BTYPE_BITMAP) { // all other types
         if (strlen(param->key_str)) {
             if (strcmp(param->key_str, "0")) {
                 struct param* p = param_get(param->key_str);
@@ -289,7 +293,6 @@ static int validation_params(void* p, void* data)
                               param->pos);
                     return !POOL_PARAM_SUCCESS;
                 }
-
             }
             if (!format_get(param->name)) {
                 ERROR_MSG("Param '%s' width subkey '%s' not defined in format @ %s", param->name, param->key_str, param->pos);
@@ -410,7 +413,7 @@ struct parse_res parse_init(void)
     auto_define();
     validation();
     res.error_num = !!error_msg;
-    res.warning_num = !!warning_num;
+    res.warning_num = warning_num;
     return res;
 }
 

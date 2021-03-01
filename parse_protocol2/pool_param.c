@@ -17,7 +17,7 @@ struct pool_param {
 
 static struct pool_param m_params;
 
-struct param* param_add(char* name, int bit_offset, int bit_width, int bit_length, char *width_name, int basic_type,
+struct param* param_add(char* name, int bit_offset, int bit_width, int bit_length, char* width_name, int basic_type,
                         char* key_str, char* range_str, char* default_str, char* output, char* description,
                         int cfg_flag, char* pos)
 {
@@ -35,7 +35,7 @@ struct param* param_add(char* name, int bit_offset, int bit_width, int bit_lengt
     p->bit_offset  = bit_offset;
     p->bit_width   = bit_width;
     p->bit_length  = bit_length;
-    p->width_name  = width_name?strdup(width_name):NULL;
+    p->width_name  = width_name ? strdup(width_name) : NULL;
     p->basic_type  = basic_type;
     p->key_str     = strdup(key_str);
     p->range_str   = strdup(range_str);
@@ -99,9 +99,11 @@ int param_enum_add(struct param* p, char* subkey, int value, char* output, char*
     e->value = value;
     e->output = strlen(output) ? strdup(output) : NULL;
     e->pos = strdup(pos);
+#if 0
     if (p->enum_num && e->value <= p->enum_items[p->enum_num - 1].value) {
         return POOL_PARAM_KEY_MUST_INC;
     }
+#endif
     p->enum_num++;
     return POOL_PARAM_SUCCESS;
 }

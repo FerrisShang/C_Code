@@ -54,9 +54,11 @@ int format_item_add(struct format* p, char* remark, int key_code, char* param_li
     if (p->format_num == MAX_FMT_LENGTH2) {
         return POOL_PARAM_ERR_MEM;
     }
+#if 0
     if (p->format_num && p->items[p->format_num - 1].key_code >= key_code) {
         return POOL_FORMAT_KEY_MUST_INC;
     }
+#endif
     item = &p->items[p->format_num];
     item->remark = strdup(remark);
     item->key_code = key_code;
