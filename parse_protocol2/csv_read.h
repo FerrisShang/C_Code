@@ -26,7 +26,9 @@ enum {
 };
 
 int csv_read(char* filename, struct csv_data* data);
+void csv_free(struct csv_data* data);
 void csv_dump(struct csv_data* data);
+void csv_output_c(struct csv_data* data);
 
 
 #endif /* __CSV_READ_H__ */

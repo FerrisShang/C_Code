@@ -35,8 +35,8 @@ enum {
     BTYPE_INVALID = -1,
 };
 
-int output_get(int basic_type, uint8_t* data, int bit_len, char*** pp_out, int* out_num,
-               char* (*enum_str_cb)(int key, void* p), void* enum_p);
+int output_get(int basic_type, const uint8_t* data, int bit_len, char*** pp_out, int* out_num,
+               const char* (*enum_str_cb)(int key, void* p), void* enum_p);
 void output_free(char** pp_out, int out_num);
 bool is_basic_type(char* str);
 const char* type_str(int basic_type);

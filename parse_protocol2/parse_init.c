@@ -9,8 +9,6 @@
 #include "hashmap.h"
 #include "utils.h"
 
-#define p_calloc(s,n) calloc(s,n)
-#define p_free(p) free(p)
 #define parse_debug printf
 
 #define MAX_WARNING_NUM 64
@@ -310,14 +308,28 @@ static int validation_formats(void* p, void* data)
 {
     struct format* format = (struct format*)data;
     // format subItems validation
-    int i, j;
+    int i, j, k;
     for (i = 0; i < format->format_num; i++) {
         struct format_item* item = &format->items[i];
         for (j = 0; j < item->params_num; j++) {
             struct format_param* p = &item->params[j];
-            if (!param_get(p->type)) {
+            struct param* param = param_get(p->type);
+            if (!param) {
                 ERROR_MSG("Type '%s' in format '%s' not defined in param @ %s", p->type, format->name, item->pos);
                 return !POOL_FORMAT_SUCCESS;
+            } else if (param->basic_type != BTYPE_ENUM && param->basic_type != BTYPE_BITMAP &&
+                       param->key_str && strlen(param->key_str) && strcmp(param->key_str, "0")) {
+                int found = false;
+                for (k = j - 1; k >= 0; k--) {
+                    if (!strcmp(item->params[k].type, param->key_str)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    ERROR_MSG("Subkey '%s' in type '%s' not defined in format list @ %s", param->key_str, p->type, item->pos);
+                    return !POOL_FORMAT_SUCCESS;
+                }
             }
             if (strcmp(p->type, p->name) && param_get(p->name)) {
                 ERROR_MSG("Item name '%s' is already defined as a type name @ %s", p->name, item->pos);
@@ -397,16 +409,21 @@ struct parse_res parse_init(void)
         int p_res = csv_read(fileNameParam, &param);
         if (f_res == CSV_SUCCESS && p_res == CSV_SUCCESS) {
             init_param(&param);
+            csv_free(&param);
             if (error_msg) {
                 res.error_num = !!error_msg;
+                csv_free(&format);
                 return res;
             }
             init_format(&format);
+            csv_free(&format);
             if (error_msg) {
                 res.error_num = !!error_msg;
                 return res;
             }
         } else {
+            csv_free(&param);
+            csv_free(&format);
             break;
         }
     }
@@ -415,6 +432,12 @@ struct parse_res parse_init(void)
     res.error_num = !!error_msg;
     res.warning_num = warning_num;
     return res;
+}
+
+void parse_free(void)
+{
+    pool_param_free();
+    pool_format_free();
 }
 
 __WEAK int check_param_name(char* s)

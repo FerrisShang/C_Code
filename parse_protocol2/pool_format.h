@@ -37,6 +37,7 @@ struct format* format_add(char* name, char* pos);
 int format_item_add(struct format* p, char* remark, int key_code, char* param_list, char* pos);
 struct format* format_get(char* str);
 struct format_item* format_item_get(char* str, int key_code);
+void pool_format_free(void);
 int pool_format_iterate(int (*callback)(void* p, void* data), void* p);
 void pool_format_dump(void);
 

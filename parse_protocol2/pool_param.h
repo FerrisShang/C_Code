@@ -61,6 +61,7 @@ struct param {
     int cfg_unused;
     int cfg_out_priority; /* -8 ~ 7*/
     char* pos; // param position
+    int flag_alias;
 };
 
 struct param* param_add(char* name, int bit_offset, int bit_width, int bit_length, char* width_name, int basic_type,
@@ -72,5 +73,6 @@ int param_alias(char* old_name, char* new_name, char* pos);
 struct param* param_get(char* str);
 int pool_param_iterate(int (*callback)(void* p, void* data), void* p);
 void pool_param_dump(void);
+void pool_param_free(void);
 
 #endif /* __POOL_PARAM_H__ */

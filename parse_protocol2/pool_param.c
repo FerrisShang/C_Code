@@ -4,11 +4,12 @@
 #include <assert.h>
 #include "pool_param.h"
 #include "hashmap.h"
+#include "utils.h"
 
 #define MAX_ENUM_LENGTH 32
 #define MAX_ENUM_LENGTH2 1024
-#define p_calloc(s,n) calloc(s,n)
-#define p_free(p) free(p)
+#define p_calloc(s,n) util_calloc(s,n)
+#define p_free(p) util_free(p)
 #define pool_debug printf
 
 struct pool_param {
@@ -29,7 +30,7 @@ struct param* param_add(char* name, int bit_offset, int bit_width, int bit_lengt
         return NULL;
     }
 
-    struct param* p = p_calloc(sizeof(struct param), 1);
+    struct param* p = (struct param*)p_calloc(sizeof(struct param), 1);
     assert(p);
     p->name        = strdup(name);
     p->bit_offset  = bit_offset;
@@ -66,11 +67,12 @@ int param_alias(char* old_name, char* new_name, char* pos)
             hashmap_get(m_params.map, old_name, (any_t*)&p_old_param) != MAP_OK) {
         return POOL_PARAM_REDEFINE;
     }
-    struct param* p = p_calloc(sizeof(struct param), 1);
+    struct param* p = (struct param*)p_calloc(sizeof(struct param), 1);
     assert(p);
     memcpy(p, p_old_param, sizeof(struct param));
     p->name        = strdup(new_name);
     p->pos = pos ? strdup(pos) : strdup(p_old_param->pos);
+    p->flag_alias = true;
     hashmap_put(m_params.map, new_name, p);
     return POOL_PARAM_SUCCESS;
 }
@@ -81,12 +83,12 @@ int param_enum_add(struct param* p, char* subkey, int value, char* output, char*
         return POOL_PARAM_ERR_TYPE;
     }
     if (!p->enum_items) {
-        p->enum_items = p_calloc(sizeof(struct enum_item), MAX_ENUM_LENGTH);
+        p->enum_items = (struct enum_item*)p_calloc(sizeof(struct enum_item), MAX_ENUM_LENGTH);
         assert(p->enum_items);
     }
     if (p->enum_num == MAX_ENUM_LENGTH) {
         struct enum_item* tmp = p->enum_items;
-        p->enum_items = p_calloc(sizeof(struct enum_item), MAX_ENUM_LENGTH2);
+        p->enum_items = (struct enum_item*)p_calloc(sizeof(struct enum_item), MAX_ENUM_LENGTH2);
         assert(p->enum_items);
         memcpy(p->enum_items, tmp, sizeof(struct enum_item) * MAX_ENUM_LENGTH);
         p_free(tmp);
@@ -110,6 +112,7 @@ int param_enum_add(struct param* p, char* subkey, int value, char* output, char*
 
 struct param* param_get(char* str)
 {
+    assert(str);
     if (m_params.map) {
         any_t arg;
         if (hashmap_get(m_params.map, str, &arg) == MAP_OK) {
@@ -119,9 +122,42 @@ struct param* param_get(char* str)
     return NULL;
 }
 
+static int free_iterate_cb(any_t item, any_t data)
+{
+    struct param* p = (struct param*)data;
+    if (!p->flag_alias) {
+        if (p->key_str)free(p->key_str);
+        if (p->range_str)free(p->range_str);
+        if (p->default_str)free(p->default_str);
+        if (p->output)free(p->output);
+        if (p->description)free(p->description);
+        if (p->enum_items) {
+            for (int i = 0; i < p->enum_num; i++) {
+                struct enum_item* item = &p->enum_items[i];
+                if (item->subkey)free(item->subkey);
+                if (item->output)free(item->output);
+                if (item->pos)free(item->pos);
+            }
+            p_free(p->enum_items);
+        }
+    }
+    if (p->name)free(p->name);
+    if (p->pos)free(p->pos);
+    p_free(p);
+    return MAP_OK;
+}
+void pool_param_free(void)
+{
+    if (m_params.map) {
+        hashmap_iterate(m_params.map, free_iterate_cb, NULL);
+        hashmap_free(m_params.map);
+        m_params.map = NULL;
+    }
+}
+
 static int hashmap_iterate_cb(any_t item, any_t data)
 {
-    struct param* p = data;
+    struct param* p = (struct param*)data;
     pool_debug("%s %s %d/%d/%d 0x%X %d %d %d %d %d %d %d %s\n", p->name, type_str(p->basic_type),
                p->bit_offset, p->bit_width, p->bit_length, p->cfg_flag, p->cfg_output_subkey,
                p->cfg_inc_indent, p->cfg_output_bit_is0, p->cfg_param_can_longer,

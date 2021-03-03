@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <assert.h>
 #include "utils.h"
 
 char* strip(char* str, int* len)
@@ -38,21 +39,6 @@ int strcnt(const char* str, char* sub)
     } while (str && *str);
     return cnt;
 }
-
-#ifndef __STRDUP__
-#define __STRDUP__
-char* __strdup (const char* s)
-{
-    size_t slen = strlen(s);
-    char* result = (char*)malloc(slen + 1);
-    if (result == NULL) {
-        return NULL;
-    }
-
-    memcpy(result, s, slen + 1);
-    return result;
-}
-#endif /* __STRDUP__ */
 
 bool is_valid_num(const char* s)
 {
@@ -149,4 +135,51 @@ void dump_hex(const void* p, int len)
     }
     printf("\n");
 }
+
+#if MEM_STAT
+#define MAX_MEM_REC 1<<24
+static size_t mem_rec[MAX_MEM_REC];
+void* __util_calloc (size_t __nmemb, size_t __size, char* line, int num)
+{
+    void* ret = calloc(__nmemb, __size);
+    int i;
+    for (i = 0; i < MAX_MEM_REC; i++) {
+        if (mem_rec[i] == 0) {
+            mem_rec[i] = (size_t)ret;
+            break;
+        }
+    }
+    if (0 && i == MAX_MEM_REC) {
+        puts("no memory recored !");
+        assert(i != MAX_MEM_REC);
+    }
+    return ret;
+}
+void __util_free (void* __ptr, char* line, int num)
+{
+    int i;
+    for (i = 0; i < MAX_MEM_REC; i++) {
+        if (mem_rec[i] == (size_t)__ptr) {
+            mem_rec[i] = 0;
+            break;
+        }
+    }
+    if (i == MAX_MEM_REC) {
+        printf("free invalid pointer! %s@%d\n", line, num);
+        assert(i != MAX_MEM_REC);
+    }
+    free(__ptr);
+}
+void util_mem_stat(void)
+{
+    int i, cnt = 0;
+    for (i = 0; i < MAX_MEM_REC; i++) {
+        if (mem_rec[i]) {
+            cnt++;
+            //printf("%d, %p\n", i, (void*)mem_rec[i]);
+        }
+    }
+    printf("mem no free:%d\n", cnt);
+}
+#endif
 

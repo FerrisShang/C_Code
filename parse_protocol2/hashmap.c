@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define INITIAL_SIZE (256)
+#define INITIAL_SIZE (4096)
 #define MAX_CHAIN_LENGTH (8)
 
 /* We need to keep keys and values */
@@ -90,7 +90,7 @@ err:
 /*                                                                        */
 /*  --------------------------------------------------------------------  */
 
-static unsigned long crc32_tab[] = {
+const static unsigned long crc32_tab[] = {
     0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L,
     0x706af48fL, 0xe963a535L, 0x9e6495a3L, 0x0edb8832L, 0x79dcb8a4L,
     0xe0d5e91eL, 0x97d2d988L, 0x09b64c2bL, 0x7eb17cbdL, 0xe7b82d07L,
@@ -249,6 +249,7 @@ int hashmap_rehash(map_t in)
             continue;
 
         status = hashmap_put(m, curr[i].key, curr[i].data);
+        free(curr[i].key);
         if (status != MAP_OK)
             return status;
     }
@@ -280,7 +281,9 @@ int hashmap_put(map_t in, char* key, any_t value)
 
     /* Set the data */
     m->data[index].data = value;
-    m->data[index].key = key;
+    if (!m->data[index].key) {
+        m->data[index].key = strdup(key);
+    }
     m->data[index].in_use = 1;
     m->size++;
 
@@ -393,6 +396,11 @@ int hashmap_remove(map_t in, char* key)
 void hashmap_free(map_t in)
 {
     hashmap_map* m = (hashmap_map*) in;
+    for (int i = 0; i < m->table_size; i++) {
+        if (m->data[i].in_use != 0) {
+            free(m->data[i].key);
+        }
+    }
     free(m->data);
     free(m);
 }

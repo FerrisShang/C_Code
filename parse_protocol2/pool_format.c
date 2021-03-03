@@ -10,8 +10,8 @@
 
 #define MAX_FMT_LENGTH 32
 #define MAX_FMT_LENGTH2 1024
-#define p_calloc(s,n) calloc(s,n)
-#define p_free(p) free(p)
+#define p_calloc(s,n) util_calloc(s,n)
+#define p_free(p) util_free(p)
 #define pool_debug printf
 
 struct pool_format {
@@ -29,7 +29,7 @@ struct format* format_add(char* name, char* pos)
     if (hashmap_get(m_formats.map, name, &arg) == MAP_OK) {
         return NULL;
     }
-    struct format* p = p_calloc(sizeof(struct format), 1);
+    struct format* p = (struct format*)p_calloc(sizeof(struct format), 1);
     assert(p);
     p->name = strdup(name);
     p->pos = strdup(pos);
@@ -41,12 +41,12 @@ int format_item_add(struct format* p, char* remark, int key_code, char* param_li
 {
     struct format_item* item = NULL;
     if (!p->items) {
-        p->items = p_calloc(sizeof(struct format_item), MAX_FMT_LENGTH);
+        p->items = (struct format_item*)p_calloc(sizeof(struct format_item), MAX_FMT_LENGTH);
         assert(p->items);
     }
     if (p->format_num == MAX_FMT_LENGTH) {
         struct format_item* tmp = p->items;
-        p->items = p_calloc(sizeof(struct format_item), MAX_FMT_LENGTH2);
+        p->items = (struct format_item*)p_calloc(sizeof(struct format_item), MAX_FMT_LENGTH2);
         assert(p->items);
         memcpy(p->items, tmp, sizeof(struct format_item) * MAX_FMT_LENGTH);
         p_free(tmp);
@@ -65,7 +65,7 @@ int format_item_add(struct format* p, char* remark, int key_code, char* param_li
     item->pos = strdup(pos);
     item->params_num = 0;
     int max_num = strcnt(param_list, "|") + 1;
-    item->params = p_calloc(sizeof(struct format_param), max_num);
+    item->params = (struct format_param*)p_calloc(sizeof(struct format_param), max_num);
 
 
     char* str = strdup(param_list);
@@ -84,12 +84,12 @@ int format_item_add(struct format* p, char* remark, int key_code, char* param_li
         type = strip(type, &len_type);
         name = strip(name, &len_name);
         if (type && len_type && name && len_name) {
-            item->params[item->params_num].type = type;
-            item->params[item->params_num].name = name;
+            item->params[item->params_num].type = strdup(type);
+            item->params[item->params_num].name = strdup(name);
             item->params_num++;
         }
     }
-    // no free [str];
+    free(str);
     p->format_num++;
     return POOL_FORMAT_SUCCESS;
 }
@@ -120,9 +120,41 @@ struct format_item* format_item_get(char* str, int key_code)
     return NULL;
 }
 
+static int free_iterate_cb(any_t item, any_t data)
+{
+    struct format* p = (struct format*)data;
+    free(p->name);
+    free(p->pos);
+    if (p->items) {
+        for (int i = 0; i < p->format_num; i++) {
+            struct format_item* item = &p->items[i];
+            free(item->remark);
+            free(item->pos);
+            if (item->params) {
+                for (int j = 0; j < item->params_num; j++) {
+                    free(item->params[j].type);
+                    free(item->params[j].name);
+                }
+                p_free(item->params);
+            }
+        }
+        p_free(p->items);
+    }
+    p_free(p);
+    return MAP_OK;
+}
+void pool_format_free(void)
+{
+    if (m_formats.map) {
+        hashmap_iterate(m_formats.map, free_iterate_cb, NULL);
+        hashmap_free(m_formats.map);
+        m_formats.map = NULL;
+    }
+}
+
 static int hashmap_iterate_format_cb(any_t item, any_t data)
 {
-    struct format* p = data;
+    struct format* p = (struct  format*)data;
     int i, j;
     pool_debug("'%s': %d items pos:%s\n", p->name, p->format_num, p->pos);
     for (i = 0; i < p->format_num; i++) {

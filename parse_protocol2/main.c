@@ -11,8 +11,9 @@
 void dump_param(struct parsed_data* p)
 {
     puts("------------------------------");
-    for (int n = 0; n < p->items_num; n++) {
-        struct parsed_item* pitem = &p->items[n];
+    while (p) {
+        p = p->next;
+        struct parsed_item* pitem = p->item;
         for (int i = 0; i < pitem->line_num && pitem->out_priority >= 0; i++) {
             printf("%2d%d %s", pitem->out_priority, pitem->indent, pitem->title);
             for (int j = 0; j < 32 - strlen(pitem->title); j++) {
@@ -20,8 +21,12 @@ void dump_param(struct parsed_data* p)
             }
             printf(": %s\n", pitem->lines[i]);
         }
+        if (!p->next) {
+            break;
+        }
     }
 }
+
 int main(int argc, char* argv[])
 {
     struct parse_res res = parse_init();
@@ -32,31 +37,29 @@ int main(int argc, char* argv[])
     for (int i = 0; i < res.warning_num; i++) {
         puts(res.warning_msg[i]);
     }
-    struct parsed_data ret;
+    struct parsed_data* ret;
     uint8_t d1[] = {0x01, 0x36, 0x20, 0x19, 0x01, 0x00, 0x00, 0x29, 0x00, 0x00, 0x29, 0x00, 0x00, 0x07, 0x00, 0x00, 0x2e, 0x01, 0x62, 0xf5, 0x72, 0xc2, 0x00, 0x7f, 0x01, 0x00, 0x01, 0x0f, 0x00};
     uint8_t d2[] = {0x01, 0x36, 0x20, 0x19, 0x01, 0x00, 0x00, 0x29, 0x00, 0x00, 0x29, 0x00, 0x00, 0x07, 0x00, 0x00, 0x2e, 0x01, 0x62, 0xf5, 0x72, 0xc2, 0x00,};
     uint8_t d3[] = {0x01, 0x36, 0x20, 0x19, 0x01, 0x00, 0x00, 0x29, 0x00, 0x00, 0x29, 0x00, 0x00, 0x07, 0x00, 0x00, 0x2e, 0x01, 0x62, 0xf5, 0x72, 0xc2, 0x00, 0x7f, 0x01, 0x00, 0x01, 0x0f, 0x00, 1, 2, 3, 4, 5, 6};
     uint8_t d4[] = {0x02, 0x40, 0x00, 0x0d, 0x00, 0x09, 0x00, 0x04, 0x00, 0x1b, 0x09, 0x00, 0x00, 0xfa, 0xff, 0xfe, 0xff, 0x00};
     uint8_t d5[] = {0x02, 0x40, 0x00, 0x16, 0x00, 0x12, 0x00, 0x91, 0x00, 0xb7, 0x6b, 0x11, 0x0e, 0xbe, 0x68, 0x2a, 0xd3, 0x7d, 0x40, 0xa4, 0xa3, 0x94, 0xa5, 0xb6, 0xe5, 0x9d, 0x00};
     ret = unpack(d1, sizeof(d1));
-    dump_param(&ret);
+    dump_param(ret);
+    unpack_free(ret);
     ret = unpack(d2, sizeof(d2));
-    dump_param(&ret);
+    dump_param(ret);
+    unpack_free(ret);
     ret = unpack(d3, sizeof(d3));
-    dump_param(&ret);
+    dump_param(ret);
+    unpack_free(ret);
     ret = unpack(d4, sizeof(d4));
-    dump_param(&ret);
+    dump_param(ret);
+    unpack_free(ret);
     ret = unpack(d5, sizeof(d5));
-    dump_param(&ret);
-    ret = unpack(d1, sizeof(d1));
-    dump_param(&ret);
-    ret = unpack(d2, sizeof(d2));
-    dump_param(&ret);
-    ret = unpack(d3, sizeof(d3));
-    dump_param(&ret);
-    ret = unpack(d4, sizeof(d4));
-    dump_param(&ret);
-    ret = unpack(d5, sizeof(d5));
-    dump_param(&ret);
+    dump_param(ret);
+    unpack_free(ret);
+
+    parse_free();
+    util_mem_stat();
     return 0;
 }

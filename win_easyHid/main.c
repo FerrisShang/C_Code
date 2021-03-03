@@ -15,7 +15,7 @@ typedef void (*hook_callback_t)(int nCode, WPARAM wParam, LPARAM lParam);
 typedef void (*set_callback_t)(hook_callback_t cb, void(*switch_cb)(int num));
 
 typedef struct{
-#define SIZE 128
+#define SIZE 8
 	uint16_t conn_hdl;
 	bool reconnect;
 	uint8_t ready_cnt;
@@ -153,7 +153,7 @@ void ble_event_cb(eb_event_t *param)
             break;}
         case EB_EVT_GATTS_READ_REQ:{
 			if(param->gatts.read.att_hdl == HANDLE_REPORT_MAP){
-				param->gatts.read.length = MIN(22, sizeof(hid_report_map) - param->gatts.read.offset);
+				param->gatts.read.length = MIN(eb_gap_get_mtu(), sizeof(hid_report_map) - param->gatts.read.offset);
 				memcpy(param->gatts.read.value,
 						&hid_report_map[param->gatts.read.offset],
 						param->gatts.read.length);

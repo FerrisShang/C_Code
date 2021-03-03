@@ -33,6 +33,7 @@ struct parse_res {
 };
 
 struct parse_res parse_init(void);
+void parse_free(void);
 
 int check_param_name(char* s); // non 0 means failed
 int check_param_width(char* s);
