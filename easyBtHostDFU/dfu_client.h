@@ -11,6 +11,7 @@
 #define DFU_UNSUPPORTED_TYPE         0x07
 #define DFU_OPERATION_NOT_PERMITTED  0x08
 #define DFU_OPERATION_FAILED         0x0A
+#define DFU_VERSION_NOT_MATCH        0x41
 #define DFU_UPDATE_ABORT             0x80
 #define DFU_CRC_NOT_MATCH            0x81
 
