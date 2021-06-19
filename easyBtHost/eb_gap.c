@@ -72,9 +72,9 @@ void eb_gap_set_random_address(bdaddr_t addr)
 
 void eb_gap_adv_set_data(eb_adv_set_type_t type, uint8_t *data, uint8_t len)
 {
-    uint8_t cmd[4+32] = {0x01, type==EB_GAP_ADV_SET_DATA?0x08:0x09, 0x20, len+1, len};
+    uint8_t cmd[4+32] = {0x01, type==EB_GAP_ADV_SET_DATA?0x08:0x09, 0x20, 32, len};
     memcpy(&cmd[5], data, len);
-    eb_h4_send(cmd, 5+len);
+    eb_h4_send(cmd, sizeof(cmd));
 }
 
 void eb_gap_adv_set_param(uint16_t intv_min, uint16_t intv_max, eb_adv_type_t adv_type, 

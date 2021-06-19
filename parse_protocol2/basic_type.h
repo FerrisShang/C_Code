@@ -8,6 +8,7 @@
 #define BTYPE_UNSIGNED_STR  "unsigned"
 #define BTYPE_SIGNED_STR    "signed"
 #define BTYPE_STREAM_STR    "stream"
+#define BTYPE_STRING_STR    "string"
 #define BTYPE_HEX_STR       "hex"
 #define BTYPE_ADDRESS_STR   "address"
 #define BTYPE_T_0_625MS_STR "T0_625ms"
@@ -25,6 +26,7 @@ enum {
     BTYPE_UNSIGNED,
     BTYPE_SIGNED,
     BTYPE_STREAM,
+    BTYPE_STRING,
     BTYPE_HEX,
     BTYPE_ADDRESS,
     BTYPE_T_0_625MS,

@@ -54,14 +54,22 @@ static void init_param(struct csv_data* csv_p)
         }
         char cell_pos[64];
         sprintf(cell_pos, "%s(line:%d)", csv_p->filename, i + 1);
+        int flag_enum_add = false;
         if (strlen(cell_name->text) > 0) { // parameter define
             if (check_param_name(cell_name->text)) {
                 ERROR_MSG("Invalid 'param_name' formating: '%s' @ %s", cell_name->text, cell_pos);
                 return;
             } else if (param_get(cell_name->text)) { // check redefine
-                ERROR_MSG("Redefined param name: '%s' @ %s", cell_name->text, cell_pos);
-                return;
-            } else if (check_param_width(cell_width->text)) { // check bit width
+                int basic_type = type_idx(cell_type->text);
+                if (basic_type == BTYPE_ENUM){
+                    flag_enum_add = true;
+                    cur_param = param_get(cell_name->text);
+                } else {
+                    ERROR_MSG("Redefined param name: '%s' @ %s", cell_name->text, cell_pos);
+                    return;
+                }
+            }
+            if (check_param_width(cell_width->text)) { // check bit width
                 ERROR_MSG("Invalid 'bit_width' formating: '%s' @ %s", cell_width->text, cell_pos);
                 return;
             } else if (check_param_type(cell_type->text)) { // check param type
@@ -143,9 +151,13 @@ static void init_param(struct csv_data* csv_p)
                     ERROR_MSG("Width of the values in type '%s' must NOT lager than 32 bits @ %s", cell_type->text, cell_pos);
                     return;
                 }
-                cur_param = param_add(cell_name->text, bit_offset, bit_width, bit_length, width_str, basic_type,
-                                      cell_key->text, cell_value->text, cell_def->text, cell_output->text, "",
-                                      cfg, cell_pos);
+                if(flag_enum_add && cur_param){
+                    flag_enum_add = false;
+                } else {
+                    cur_param = param_add(cell_name->text, bit_offset, bit_width, bit_length, width_str, basic_type,
+                            cell_key->text, cell_value->text, cell_def->text, cell_output->text, "",
+                            cfg, cell_pos);
+                }
                 if (basic_type == BTYPE_ENUM || basic_type == BTYPE_BITMAP) { // type == enum/bitmap
                     int res = param_enum_add(cur_param, cell_key->text, str2u32(cell_value->text), cell_output->text, cell_pos);
                     assert(res == POOL_PARAM_KEY_MUST_INC || res == POOL_PARAM_SUCCESS);
@@ -213,10 +225,11 @@ static void init_format(struct csv_data* csv_f)
                 return;
             }
             if (format_get(cell_cmd->text)) {
-                ERROR_MSG("Redefined format: '%s' @ %s", cell_cmd->text, cell_pos);
-                return;
+                //ERROR_MSG("Redefined format: '%s' @ %s", cell_cmd->text, cell_pos);
+                cur_format = format_get(cell_cmd->text);
+            } else {
+                cur_format = format_add(cell_cmd->text, cell_pos); // add new format (without sub_items)
             }
-            cur_format = format_add(cell_cmd->text, cell_pos); // add new format (without sub_items)
             assert(cur_format);
         } else if (!strlen(cell_remark->text) && !strlen(cell_key->text) && !strlen(cell_param->text)) { // It's empty line
             continue;
@@ -293,7 +306,7 @@ static int validation_params(void* p, void* data)
                 }
             }
             if (!format_get(param->name)) {
-                ERROR_MSG("Param '%s' width subkey '%s' not defined in format @ %s", param->name, param->key_str, param->pos);
+                ERROR_MSG("Param '%s' with subkey '%s' not defined in format @ %s", param->name, param->key_str, param->pos);
                 return !POOL_PARAM_SUCCESS;
             }
         }

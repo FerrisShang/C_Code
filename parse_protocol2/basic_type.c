@@ -20,6 +20,7 @@ const static struct type_map m_type_map[] = {
     { BTYPE_UNSIGNED,  "unsigned" },
     { BTYPE_SIGNED,    "signed"   },
     { BTYPE_STREAM,    "stream"   },
+    { BTYPE_STRING,    "string"   },
     { BTYPE_HEX,       "hex"      },
     { BTYPE_ADDRESS,   "address"  },
     { BTYPE_T_0_625MS, "T0_625ms" },
@@ -93,8 +94,16 @@ int output_get(int basic_type, const uint8_t* data, int bit_len, char*** pp_out,
             p_out = *pp_out;
 #endif
         } // no break;
-        case BTYPE_STREAM: {
+        case BTYPE_STRING: {
             char buf[bit_len / 8 * 3], *p = buf;
+            for (int i = 0; i < bit_len / 8 & data[i] != '\0'; i++) {
+                *p++ = data[i];
+            }
+            *p = '\0';
+            p_out[0] = strdup(buf);
+        } break;
+        case BTYPE_STREAM: {
+            char buf[bit_len / 8 + 1], *p = buf;
             for (int i = 0; i < bit_len / 8; i++) {
                 *p++ = (data[i] >> 4) >= 10 ? (data[i] >> 4) + 'A' - 10 : (data[i] >> 4) + '0';
                 *p++ = (data[i] & 0xF) >= 10 ? (data[i] & 0xF) + 'A' - 10 : (data[i] & 0xF) + '0';
