@@ -126,6 +126,12 @@ void ble_event_cb(eb_event_t *param)
             break;
         case EB_EVT_GAP_RESET:{
 			hid_env.conn_hdl = 0xFFFF;
+			uint8_t cmd1[] = "\x01\x01\x0c\x08\xFF\xFF\xFF\xFF\xFF\x1F\xFF\x3F";
+			eb_h4_send(cmd1, sizeof(cmd1)-1);
+            usleep(5000);
+			uint8_t cmd[] = "\x01\x01\x20\x08\x1F\x00\x00\x00\x00\x00\x00\x00";
+			eb_h4_send(cmd, sizeof(cmd)-1);
+            usleep(5000);
             eb_gap_adv_set_data(EB_GAP_ADV_SET_DATA, "\x02\x01\x06\x03\x03\x12\x18\x03\x19\xC2\x03\x02\x09\x5F", 14);
             usleep(5000);
             eb_gap_adv_set_param(0x20, 0x20, EB_GAP_ADV_IND, EB_ADV_ADDR_TYPE_RANDOM,
